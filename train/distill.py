@@ -45,7 +45,8 @@ def build_teacher():
 # -----------------------------------------------------------
 
 def run_distillation(args):
-    pl.seed_everything(args.seed or 42)
+    seed = args.seed or SEED
+    pl.seed_everything(seed)
     print("\n=== PHASE I: VMAMBA DISTILLATION ===")
 
     # 1. Models
@@ -67,7 +68,7 @@ def run_distillation(args):
         dm = APTOSModule(root=APTOS_PATH, transform=tfm, batch_size=BATCH_SIZE)
     else:
         dm = IDRiDModule(root=IDRID_PATH, transform=tfm, batch_size=BATCH_SIZE)
-    dm.setup()
+    dm.setup(stage="fit")
 
     # 3. Distillation Wrapper
     # This LightningModule handles the loss calculation (MSE/Cosine) between teacher and student
@@ -80,10 +81,10 @@ def run_distillation(args):
 
     # 4. Callbacks & Trainer
     ckpt_cb = ModelCheckpoint(
-        monitor="val/distill_loss",
+        monitor="train/distill_loss",
         mode="min",
         save_top_k=1,
-        filename="best_distillation"
+        filename=f"best_distillation_{seed}_{args.dataset}"
     )
     
     early_cb = EarlyStopping(
@@ -118,7 +119,7 @@ def run_distillation(args):
         model.load_state_dict(state, strict=False)
 
         # Ensure datamodule has loaders
-        dm.setup()
+        dm.setup(stage="fit")
         train_dl = dm.train_dataloader()
         val_dl = dm.val_dataloader()
 

@@ -139,7 +139,7 @@ def run_head_training(args):
     else:
         dm = IDRiDModule(root=IDRID_PATH, transform=tfm, batch_size=BATCH_SIZE)
         csv_path = os.path.join(IDRID_PATH, "2. Groundtruths", "a. IDRiD_Disease Grading_Training Labels.csv")
-        class_weights = compute_idrid_class_weights(csv_path, NUM_CLASSES)
+        class_weights = compute_idrid_class_weights(csv_path)
 
     dm.setup()
 
@@ -150,6 +150,7 @@ def run_head_training(args):
     early_cb = EarlyStopping(monitor="val/f1", patience=100, mode="max")
 
     import time
+    seed = args.seed or SEED
     run_name = f"head_{args.dataset}_{int(time.time())}"
     trainer = pl.Trainer(
         max_epochs=HEAD_EPOCHS,
@@ -163,7 +164,7 @@ def run_head_training(args):
     trainer.fit(model, dm)
 
     # 4. Final Save (Backbone + Head split)
-    save_path = os.path.join(CHECKPOINT_DIR, "vmamba_final_head.pth")
+    save_path = os.path.join(CHECKPOINT_DIR, run_name, seed, "_vmamba_final_head.pth")
     best_ckpt = torch.load(ckpt_cb.best_model_path)["state_dict"]
 
     final_dict = {

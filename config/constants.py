@@ -24,6 +24,7 @@ TEACHER_EMBED_DIM = int(os.getenv('TEACHER_EMBED_DIM', 1024))
 NUM_WORKERS = int(os.getenv('NUM_WORKERS', 12))
 PATIENCE = int(os.getenv('PATIENCE', 50))
 FREEZE_BACKBONE = os.getenv('FREEZE_BACKBONE', 'False') == 'True'
+SEED = int(os.getenv('SEED', 42))
 
 # Optimizer settings
 WARMUP_EPOCHS = int(os.getenv('WARMUP_EPOCHS', 10))

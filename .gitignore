@@ -220,3 +220,4 @@ checkpoints/*
 vmamba_head_training/*
 wandb/*
 wandb_logs/*
+vmamba_distillation/*
