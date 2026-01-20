@@ -17,6 +17,7 @@ from optimizers.optimizer import warmup_cosine_optimizer
 class VMambaHeadTask(pl.LightningModule):
     def __init__(self, backbone, lr, class_weights=None):
         super().__init__()
+        self._final_eval = False
         self.save_hyperparameters(ignore=["backbone", "class_weights"])
         self.backbone = backbone
 
@@ -44,7 +45,14 @@ class VMambaHeadTask(pl.LightningModule):
         
         # Modularized metrics
         metric_args = {"task": "multiclass", "num_classes": NUM_CLASSES}
-        self.metrics = nn.ModuleDict({
+        self.train_metrics = nn.ModuleDict({
+            "acc": Accuracy(**metric_args),
+            "f1": F1Score(**metric_args, average="macro"),
+            "auroc": AUROC(**metric_args),
+            "aupr": AveragePrecision(**metric_args)
+        })
+
+        self.val_metrics = nn.ModuleDict({
             "acc": Accuracy(**metric_args),
             "f1": F1Score(**metric_args, average="macro"),
             "auroc": AUROC(**metric_args),
@@ -69,12 +77,15 @@ class VMambaHeadTask(pl.LightningModule):
         preds = torch.argmax(probs, dim=1)
 
         # Update metrics (safe-guarded for AUROC)
-        self.metrics["acc"].update(preds, y)
-        self.metrics["f1"].update(preds, y)
+        metrics = self.train_metrics if stage == "train" else self.val_metrics
+
+        metrics["acc"].update(preds, y)
+        metrics["f1"].update(preds, y)
         try:
-            self.metrics["auroc"].update(probs, y)
-            self.metrics["aupr"].update(probs, y)
-        except ValueError: pass 
+            metrics["auroc"].update(probs, y)
+            metrics["aupr"].update(probs, y)
+        except ValueError:
+            pass
 
         self.log(f"{stage}/loss", loss, prog_bar=True, on_epoch=True, batch_size=x.size(0))
         return loss
@@ -84,16 +95,23 @@ class VMambaHeadTask(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         return self.shared_step(batch, "val")
-
+    
+    def test_step(self, batch, batch_idx):
+        return self.shared_step(batch, "train")
+    
     def on_train_epoch_end(self): self._log_metrics("train")
     def on_validation_epoch_end(self): self._log_metrics("val")
 
     def _log_metrics(self, stage):
-        for name, m in self.metrics.items():
+        metrics = self.train_metrics if stage == "train" else self.val_metrics
+
+        for name, m in metrics.items():
             try:
                 self.log(f"{stage}/{name}", m.compute(), prog_bar=(name == "f1"))
-            except: pass
-            m.reset()
+            except:
+                pass
+            if not self._final_eval:
+                m.reset()
 
     def configure_optimizers(self):
         params = list(self.head.parameters())
@@ -151,7 +169,10 @@ def run_head_training(args):
 
     import time
     seed = args.seed or SEED
-    run_name = f"head_{args.dataset}_{int(time.time())}"
+    mask_tag = "masked" if MASK_RATIO > 0.0 else "unmasked"
+    timestamp = int(time.time())
+
+    run_name = f"head_{args.dataset}_{mask_tag}_{seed}_{timestamp}"
     trainer = pl.Trainer(
         max_epochs=HEAD_EPOCHS,
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
@@ -164,7 +185,12 @@ def run_head_training(args):
     trainer.fit(model, dm)
 
     # 4. Final Save (Backbone + Head split)
-    save_path = os.path.join(CHECKPOINT_DIR, run_name, seed, "_vmamba_final_head.pth")
+    save_path = os.path.join(
+        CHECKPOINT_DIR,
+        f"head_{args.dataset}_{mask_tag}_{seed}_{timestamp}",
+        "vmamba_final_head.pth"
+    )
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
     best_ckpt = torch.load(ckpt_cb.best_model_path)["state_dict"]
 
     final_dict = {
@@ -177,14 +203,51 @@ def run_head_training(args):
     # load best weights into model and compute metrics
     try:
         model.load_state_dict(best_ckpt, strict=False)
-        dm.setup()
+        dm.setup(stage="fit")
+
         train_dl = dm.train_dataloader()
         val_dl = dm.val_dataloader()
-        val_metrics = trainer.validate(model, dataloaders=val_dl)
-        train_metrics = trainer.validate(model, dataloaders=train_dl)
-    except Exception:
-        val_metrics = []
-        train_metrics = []
+
+        # ---- ENABLE FINAL EVAL MODE (prevents reset) ----
+        model._final_eval = True
+
+        # Reset before starting
+        for m in model.train_metrics.values():
+            m.reset()
+        for m in model.val_metrics.values():
+            m.reset()
+
+        # ---- VAL METRICS (real validation) ----
+        trainer.validate(model, dataloaders=val_dl)
+
+        val_metrics = {
+            "val/acc": model.val_metrics["acc"].compute().item(),
+            "val/f1": model.val_metrics["f1"].compute().item(),
+            "val/auroc": model.val_metrics["auroc"].compute().item(),
+            "val/aupr": model.val_metrics["aupr"].compute().item(),
+        }
+
+        # Reset again
+        for m in model.train_metrics.values():
+            m.reset()
+        for m in model.val_metrics.values():
+            m.reset()
+
+        # ---- TRAIN METRICS (use TEST LOOP!) ----
+        trainer.test(model, dataloaders=train_dl)
+
+        train_metrics = {
+            "train/acc": model.train_metrics["acc"].compute().item(),
+            "train/f1": model.train_metrics["f1"].compute().item(),
+            "train/auroc": model.train_metrics["auroc"].compute().item(),
+            "train/aupr": model.train_metrics["aupr"].compute().item(),
+        }
+
+        model._final_eval = False
+    except Exception as e:
+        print(f"[!] Metric computation failed: {e}")
+        val_metrics = {}
+        train_metrics = {}
 
     # append to results csv
     try:
@@ -198,9 +261,10 @@ def run_head_training(args):
             "run_name": run_name,
             "seed": args.seed,
             "monitor": ckpt_cb.monitor if hasattr(ckpt_cb, "monitor") else None,
-            "monitor_value": float(ckpt_cb.best_model_score) if getattr(ckpt_cb, "best_model_score", None) is not None else None,
-            "train_metrics": train_metrics[0] if train_metrics else {},
-            "val_metrics": val_metrics[0] if val_metrics else {},
+            "monitor_value": float(ckpt_cb.best_model_score)
+                if getattr(ckpt_cb, "best_model_score", None) is not None else None,
+            "train_metrics": train_metrics if isinstance(train_metrics, dict) else {},
+            "val_metrics": val_metrics if isinstance(val_metrics, dict) else {},
         }
         append_result(row)
     except Exception:

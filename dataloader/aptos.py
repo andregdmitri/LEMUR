@@ -36,7 +36,6 @@ class APTOSDataset(Dataset):
         else:
             sub_dir, csv_name = split_map[split]
             img_dir = os.path.join(root, sub_dir)
-            print(root, sub_dir,  "AAAAAAAAA")
             self.img_paths = sorted([os.path.join(img_dir, f) for f in os.listdir(img_dir) if f.lower().endswith(('.png', '.jpg'))])
             df = pd.read_csv(os.path.join(root, csv_name))
 
