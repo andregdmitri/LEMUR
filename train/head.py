@@ -146,8 +146,8 @@ def run_head_training(args):
     ckpt = torch.load(args.load_backbone, map_location="cpu")
     # Handle both Lightning state_dicts and raw state_dicts
     state_dict = ckpt.get("state_dict", ckpt)
-    new_state = {k.replace("backbone.", ""): v for k, v in state_dict.items() if "backbone." in k}
-    backbone.load_state_dict(new_state if new_state else state_dict, strict=False)
+    new_state = {k.replace("student.", ""): v for k, v in state_dict.items() if "student." in k}
+    backbone.load_state_dict(new_state if new_state else state_dict, strict=True)
 
     # 2. Data & Weights
     tfm = eval_transform(IMG_SIZE)

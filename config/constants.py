@@ -23,7 +23,7 @@ EXPAND_DIM = int(os.getenv('EXPAND_DIM', VMAMBA_EMBED_DIM * 2))
 TEACHER_EMBED_DIM = int(os.getenv('TEACHER_EMBED_DIM', 1024))
 NUM_WORKERS = int(os.getenv('NUM_WORKERS', 12))
 PATIENCE = int(os.getenv('PATIENCE', 50))
-FREEZE_BACKBONE = os.getenv('FREEZE_BACKBONE', 'False') == 'True'
+FREEZE_BACKBONE = False  # os.getenv('FREEZE_BACKBONE', 'False') == 'True'
 SEED = int(os.getenv('SEED', 42))
 
 # Optimizer settings
