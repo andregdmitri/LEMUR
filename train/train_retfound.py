@@ -145,7 +145,7 @@ def run_train_retfound(args):
 
     if args.dataset == "idrid":
         dm = IDRiDModule(root=IDRID_PATH, transform=tfm, batch_size=BATCH_SIZE)
-        csv_path = os.path.join(IDRID_PATH)
+        csv_path = os.path.join(IDRID_PATH, "2. Groundtruths", "a. IDRiD_Disease Grading_Training Labels.csv")
         class_weights = compute_idrid_class_weights(csv_path)
     else:
         dm = APTOSModule(root=APTOS_PATH, transform=tfm, batch_size=BATCH_SIZE)
