@@ -73,7 +73,7 @@ class IDRiDModule(pl.LightningDataModule):
         if stage == "test":
             self.test_ds  = IDRiDDataset(self.root, split="test",  transform=self.transform)
         if stage == "full":
-            self.full_ds  = IDRiDDataset(self.root, split="full",  transform=self.transform)
+            self.val_ds  = IDRiDDataset(self.root, split="full",  transform=self.transform)
 
     def train_dataloader(self):
         return DataLoader(self.train_ds, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)

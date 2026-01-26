@@ -98,7 +98,7 @@ class RETFoundTask(pl.LightningModule):
         return self.shared_step(batch, "val")
 
     def test_step(self, batch, batch_idx):
-        return self.shared_step(batch, "train")
+        return self.shared_step(batch, "val")
 
     def on_train_epoch_end(self):
         self._log_metrics("train")
