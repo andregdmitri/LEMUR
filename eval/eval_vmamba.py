@@ -1,3 +1,4 @@
+from dataloader.mbrset import MBRSETModule
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
@@ -104,9 +105,10 @@ def run_evaluation(args):
 
     if args.dataset == "idrid":
         dm = IDRiDModule(root=IDRID_PATH, transform=tfm, batch_size=BATCH_SIZE)
-    else:
+    elif args.dataset == "aptos":
         dm = APTOSModule(root=APTOS_PATH, transform=tfm, batch_size=BATCH_SIZE)
-
+    elif args.dataset == "mbrset":
+        dm = MBRSETModule(root=MBRSET_PATH, transform=tfm, batch_size=BATCH_SIZE)
     dm.setup(stage="full")
 
     # -------------------------------------------------
@@ -118,15 +120,41 @@ def run_evaluation(args):
         logger=WandbLogger(project="vmamba_eval"),
         precision="16-mixed"
     )
-
+    
     # -------------------------------------------------
     # 6. Run Evaluation
     # -------------------------------------------------
     wrapper = EvalWrapper(model)
-    trainer.validate(wrapper, dm)
+    val_results = trainer.validate(wrapper, dm)
+    val_metrics = val_results[0] if len(val_results) > 0 else {}
 
     # -------------------------------------------------
     # 7. FLOPs
     # -------------------------------------------------
     flops, _ = compute_flops(model, IMG_SIZE)
     print(f"Total Complexity: {flops/1e9:.3f} GFLOPs")
+    
+    import csv
+    import os
+    import time
+
+    row = {
+        "model": "vmamba_aptos",
+        "mode": "eval",
+        "mask_ratio": "unmasked",
+        "dataset": args.dataset,
+        "model_path": args.load_model,
+        "seed": args.seed,
+        **val_metrics
+    }
+
+    csv_path = "eval_results.csv"
+    file_exists = os.path.isfile(csv_path)
+
+    with open(csv_path, "a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=row.keys())
+
+        if not file_exists:
+            writer.writeheader()
+
+        writer.writerow(row)
