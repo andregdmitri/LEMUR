@@ -15,7 +15,6 @@ This README focuses on the CLI (`main.py`) and the actual project layout so you 
 - `train/` — `distill.py`, `head.py`, `train_retfound.py`
 - `eval/` — `eval_vmamba.py`, `eval_retfound.py`, `shared_eval.py`
 - `optimizers/` — `optimizer.py` (helper for warmup + cosine schedule)
-- `ssl/` — self-supervised baselines (BYOL, Barlow Twins, SwAV)
 - `utils/` — utilities (`flops.py`, `pos_embed.py`, etc.)
 - `imgs/`, `results/` — example outputs and CSVs
 - `requirements.txt`, `simple_test.ipynb`
