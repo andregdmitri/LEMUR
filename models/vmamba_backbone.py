@@ -233,7 +233,7 @@ class VisualMamba(nn.Module):
         else:
             self.register_parameter('cls_token', None)
 
-        # positional embedding (num_patches + cls?)
+        # positional embedding
         n_pos = num_patches + (1 if use_cls_token else 0)
         self.pos_embed = nn.Parameter(torch.zeros(1, n_pos, embed_dim))
         nn.init.trunc_normal_(self.pos_embed, std=0.02)
