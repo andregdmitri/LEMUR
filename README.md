@@ -1,6 +1,6 @@
 # LEMUR: A Ultra-Lightweight Distilled Retinal Foundation Model Using Mamba
 
-This repository contains a unified pipeline for distilling a student VMamba model from a RETFound teacher, training classification heads, and evaluating on retinal fundus datasets (IDRiD, APTOS).
+This repository contains a unified pipeline for distilling a student VMamba model from a RETFound teacher, training classification heads, and evaluating on retinal fundus datasets (IDRiD, APTOS, MBRSET).
 
 This README focuses on the CLI (`main.py`) and the actual project layout so you can run evaluation and training quickly.
 
@@ -62,13 +62,19 @@ The CLI enforces required flags per mode (e.g., `--load_backbone` for `head`). S
 Evaluation — VMamba (IDRiD):
 
 ```bash
-python main.py --run eval --load_model checkpoints/vmamba_final_head.pth --dataset idrid
+python main.py --run eval --load_model CHECKPOINT_PATH --dataset idrid
+```
+
+Evaluation — VMamba (MBRSET):
+
+```bash
+python main.py --run eval --load_model CHECKPOINT_PATH --dataset mbrset
 ```
 
 Evaluation — VMamba (APTOS):
 
 ```bash
-python main.py --run eval --load_model checkpoints/vmamba_final_head.pth --dataset aptos
+python main.py --run eval --load_model CHECKPOINT_PATH --dataset aptos
 ```
 
 Evaluation — RETFound Lightning ckpt:
@@ -131,7 +137,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-2. Ensure dataset roots and checkpoint dir are set in `config/constants.py` or via environment variables (`IDRID_PATH`, `APTOS_PATH`, `CHECKPOINT_DIR`).
+2. Ensure dataset roots and checkpoint dir are set in `config/constants.py` or via environment variables (`IDRID_PATH`, `APTOS_PATH`, `MBRSET_PATH`, `CHECKPOINT_DIR`).
 
 3. Run the desired CLI command from examples above.
 
