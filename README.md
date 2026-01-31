@@ -1,4 +1,4 @@
-# StudentMAE — README
+# LEMUR — README
 
 This repository contains a unified pipeline for distilling a student VMamba model from a RETFound teacher, training classification heads, and evaluating on retinal fundus datasets (IDRiD, APTOS).
 
