@@ -19,8 +19,6 @@ This README focuses on the CLI (`main.py`) and the actual project layout so you 
 - `imgs/`, `results/` — example outputs and CSVs
 - `requirements.txt`, `simple_test.ipynb`
 
-Note: The directory is named `optimizers/` and contains `optimizer.py` (both names contain small typos). The codebase imports `optimizers.optimizer` accordingly. If you rename this directory/file, update all imports.
-
 ---
 
 ## CLI (`main.py`) — modes and arguments
@@ -216,22 +214,3 @@ If you want, I can apply either or both fixes (rename optimizer module, add the 
    # Fine-tune
    python main.py --run retfound_finetune --dataset aptos --lr 1e-5
    ```
-
-   ## Notes & gotchas
-
-   - `main.py` validates required args for each `--run` mode (e.g., `--load_model` for `--run eval`).
-   - `optimizers/optimizer.py` contains the warmup-cosine helper; the filename contains a small typo (`optimizer`) but imports across the codebase use that name consistently.
-   - The RETFound wrapper used in the repo exposes the class `RETFoundBackbone` — older notebooks may reference `RETFoundClassifier`. If needed, an alias can be added to `models/retfound.py` for compatibility.
-
-   ## Troubleshooting
-
-   - Import errors: ensure the virtualenv is activated and `requirements.txt` installed.
-   - Missing checkpoints: set `CHECKPOINT_DIR` or pass full paths to `--load_model`/`--load_backbone`.
-
-   If you want, I can:
-   - rename `optimizers/optimizer.py` -> `optimizer.py` and update imports,
-   - add a backwards-compatible `RETFoundClassifier` alias in `models/retfound.py`, or
-   - run a quick import smoke-check to verify the CLI entrypoints load.
-
-   ---
-   Updated: current codebase (evaluation and training entrypoints available via `main.py`).
