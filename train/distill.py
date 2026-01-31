@@ -40,10 +40,6 @@ def build_teacher():
         param.requires_grad = False
     return teacher
 
-# -----------------------------------------------------------
-#  Unified Distillation Entry
-# -----------------------------------------------------------
-
 def run_distillation(args):
     seed = args.seed or SEED
     pl.seed_everything(seed)
@@ -71,7 +67,6 @@ def run_distillation(args):
     dm.setup(stage="fit")
 
     # 3. Distillation Wrapper
-    # This LightningModule handles the loss calculation (MSE/Cosine) between teacher and student
     model = DistillationModule(
         teacher=teacher,
         student=student,
