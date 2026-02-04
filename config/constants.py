@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Model Config
-BATCH_SIZE = int(os.getenv('BATCH_SIZE', 32))
+BATCH_SIZE = int(os.getenv('BATCH_SIZE', 64))
 DIST_EPOCHS = int(os.getenv('DIST_EPOCHS', 1000))
 HEAD_EPOCHS = int(os.getenv('HEAD_EPOCHS', 1000))
 MASK_RATIO = float(os.getenv('MASK_RATIO', 0.0))
@@ -14,12 +14,12 @@ MASK_RATIO = float(os.getenv('MASK_RATIO', 0.0))
 INPUT_DIM = int(os.getenv('INPUT_DIM', 784))
 NUM_CLASSES = int(os.getenv('NUM_CLASSES', 5))
 IMG_SIZE = int(os.getenv('IMG_SIZE', 224))
-PATCH_SIZE = int(os.getenv('PATCH_SIZE', 32))
 IN_CHANS = int(os.getenv('IN_CHANS', 3))
-VMAMBA_DEPTH = int(os.getenv('VMAMBA_DEPTH', 8))
-VMAMBA_EMBED_DIM = int(os.getenv('VMAMBA_EMBED_DIM', 64))
-SSM_DIM = int(os.getenv('SSM_DIM', 8))
-EXPAND_DIM = int(os.getenv('EXPAND_DIM', VMAMBA_EMBED_DIM * 2))
+VMAMBA_DEPTH = int(os.getenv('VMAMBA_DEPTH', 16)) # num of blocks  ### 8, 16, 32
+VMAMBA_EMBED_DIM = int(os.getenv('VMAMBA_EMBED_DIM', 128)) # projector -> teacher ### 64, 128, 256
+SSM_DIM = int(os.getenv('SSM_DIM', 16)) # spatial mixing module dimension ### 8, 16, 32
+EXPAND_DIM = int(os.getenv('EXPAND_DIM', VMAMBA_EMBED_DIM * 2)) ### 128, 256, 512
+PATCH_SIZE = int(os.getenv('PATCH_SIZE', 32)) 
 TEACHER_EMBED_DIM = int(os.getenv('TEACHER_EMBED_DIM', 1024))
 NUM_WORKERS = int(os.getenv('NUM_WORKERS', 12))
 PATIENCE = int(os.getenv('PATIENCE', 50))
