@@ -94,6 +94,31 @@ class DistillationModule(pl.LightningModule):
         # fallback: treat t_seq as pooled 2D features
         return t_seq
 
+    def _student_features(self, x, apply_mask):
+        """Return student sequence and optional mask metadata.
+        Handles both VMamba-style MAE masked students and generic timm models.
+        """
+        if hasattr(self.student, 'forward_features'):
+            try:
+                out = self.student.forward_features(x, return_pooled=False, apply_mask=apply_mask)
+                if isinstance(out, tuple):
+                    return out
+                # if no masking output, assume sequence tokens
+                if out.ndim == 2:
+                    return out.unsqueeze(1), None, None, None
+                return out, None, None, None
+            except TypeError:
+                out = self.student.forward_features(x)
+                if out.ndim == 2:
+                    return out.unsqueeze(1), None, None, None
+                return out, None, None, None
+
+        # fallback: direct forward
+        out = self.student(x)
+        if out.ndim == 2:
+            return out.unsqueeze(1), None, None, None
+        return out, None, None, None
+
     # ---------------------------------------------------
     # TRAINING STEP
     # ---------------------------------------------------
@@ -109,11 +134,7 @@ class DistillationModule(pl.LightningModule):
         # Student (apply mask according to student.mask_ratio if enabled)
         # -------------------------
         apply_mask = self.mask_student_in_training
-        s, mask, ids_keep, ids_restore = self.student.forward_features(
-            x,
-            return_pooled=False,
-            apply_mask=apply_mask
-        )
+        s, mask, ids_keep, ids_restore = self._student_features(x, apply_mask)
         # s = (B, N, D) sequence (full-length after mask tokens inserted)
         B, N, D = s.shape
 
@@ -171,11 +192,7 @@ class DistillationModule(pl.LightningModule):
         # validate masked student set apply_mask=True here.
         apply_mask = False
 
-        s, mask, ids_keep, ids_restore = self.student.forward_features(
-            x,
-            return_pooled=False,
-            apply_mask=apply_mask
-        )
+        s, mask, ids_keep, ids_restore = self._student_features(x, apply_mask)
 
         B, N, D = s.shape
 

@@ -13,23 +13,55 @@ from models.vmamba_backbone import VisualMamba
 from models.dist import DistillationModule
 from dataloader.idrid import IDRiDModule
 from dataloader.aptos import APTOSModule
+from timm import create_model
 
 # -----------------------------------------------------------
 #  Helpers: Model Builders
 # -----------------------------------------------------------
 
 def build_student(args):
-    """Initializes the VMamba student backbone."""
-    return VisualMamba(
-        img_size=IMG_SIZE,
-        patch_size=PATCH_SIZE,
-        in_chans=IN_CHANS,
-        embed_dim=VMAMBA_EMBED_DIM,
-        depth=VMAMBA_DEPTH,
-        learning_rate=args.lr or LR,
-        mask_ratio=args.mask_ratio or MASK_RATIO,
-        use_cls_token=False
-    )
+    """Initializes the student backbone for distillation.
+    Supports:
+      * vmamba (default)  -> masking MAE student
+      * tinyvit           -> transformer student (no masking)
+      * mobilenet_v3_small
+      * efficientnet_b0
+
+    Masking is applied only to the student input when student has mask support (VMamba).
+    Teacher input is always full (unmasked) in this pipeline.
+    """
+    model_name = getattr(args, 'student_model', STUDENT_MODEL)
+    if model_name == 'vmamba':
+        return VisualMamba(
+            img_size=IMG_SIZE,
+            patch_size=PATCH_SIZE,
+            in_chans=IN_CHANS,
+            embed_dim=VMAMBA_EMBED_DIM,
+            depth=VMAMBA_DEPTH,
+            learning_rate=args.lr or LR,
+            mask_ratio=args.mask_ratio or MASK_RATIO,
+            use_cls_token=False
+        )
+
+    if model_name == 'tinyvit':
+        student = create_model('tinyvit_tiny_patch16_224', pretrained=False, num_classes=0)
+        student.mask_ratio = 0.0
+        student.requires_grad_(True)
+        return student
+
+    if model_name == 'mobilenet_v3_small':
+        student = create_model('mobilenetv3_small_100', pretrained=False, num_classes=0)
+        student.mask_ratio = 0.0
+        student.requires_grad_(True)
+        return student
+
+    if model_name == 'efficientnet_b0':
+        student = create_model('efficientnet_b0', pretrained=False, num_classes=0)
+        student.mask_ratio = 0.0
+        student.requires_grad_(True)
+        return student
+
+    raise ValueError(f"Unknown student model: {model_name}")
 
 def build_teacher():
     """Initializes and freezes the RETFound teacher."""
@@ -61,9 +93,29 @@ def run_distillation(args):
     tfm = eval_transform(IMG_SIZE)
     
     if args.dataset == "aptos":
-        dm = APTOSModule(root=APTOS_PATH, transform=tfm, batch_size=BATCH_SIZE)
+        dm = APTOSModule(
+            root=APTOS_PATH,
+            transform=tfm,
+            batch_size=BATCH_SIZE,
+            use_mixup=USE_MIXUP,
+            mixup_alpha=MIXUP_ALPHA,
+            use_mosaic=USE_MOSAIC,
+            mosaic_prob=MOSAIC_PROB,
+            use_copy_paste=USE_COPY_PASTE,
+            copy_paste_prob=COPY_PASTE_PROB,
+        )
     else:
-        dm = IDRiDModule(root=IDRID_PATH, transform=tfm, batch_size=BATCH_SIZE)
+        dm = IDRiDModule(
+            root=IDRID_PATH,
+            transform=tfm,
+            batch_size=BATCH_SIZE,
+            use_mixup=USE_MIXUP,
+            mixup_alpha=MIXUP_ALPHA,
+            use_mosaic=USE_MOSAIC,
+            mosaic_prob=MOSAIC_PROB,
+            use_copy_paste=USE_COPY_PASTE,
+            copy_paste_prob=COPY_PASTE_PROB,
+        )
     dm.setup(stage="fit")
 
     # 3. Distillation Wrapper

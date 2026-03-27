@@ -6,13 +6,24 @@ import torch
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 import pytorch_lightning as pl
-from config.constants import BATCH_SIZE, NUM_WORKERS
+from config.constants import BATCH_SIZE, NUM_WORKERS, USE_MIXUP, MIXUP_ALPHA, USE_MOSAIC, MOSAIC_PROB, USE_COPY_PASTE, COPY_PASTE_PROB
+import random
+from utils.transforms import preprocess_image, mixup_data, mosaic_data, copy_paste_data
 
 class APTOSDataset(Dataset):
-    def __init__(self, root, split="train", transform=None):
+    def __init__(self, root, split="train", transform=None,
+                 use_mixup=USE_MIXUP, mixup_alpha=MIXUP_ALPHA,
+                 use_mosaic=USE_MOSAIC, mosaic_prob=MOSAIC_PROB,
+                 use_copy_paste=USE_COPY_PASTE, copy_paste_prob=COPY_PASTE_PROB):
         self.root = root
         self.split = split
         self.transform = transform
+        self.use_mixup = use_mixup
+        self.mixup_alpha = mixup_alpha
+        self.use_mosaic = use_mosaic
+        self.mosaic_prob = mosaic_prob
+        self.use_copy_paste = use_copy_paste
+        self.copy_paste_prob = copy_paste_prob
         
         # Define internal mapping for standard splits
         split_map = {
@@ -47,33 +58,96 @@ class APTOSDataset(Dataset):
     def __len__(self):
         return len(self.img_paths)
 
-    def __getitem__(self, idx):
+    def _load_single(self, idx):
         path = self.img_paths[idx]
-        img = Image.open(path).convert("RGB")
+        img = preprocess_image(path)
         if self.transform:
             img = self.transform(img)
-        
         img_id = os.path.basename(path).split(".")[0]
-        label = int(self.label_map.get(img_id, 0)) 
+        label = int(self.label_map.get(img_id, 0))
         return img, label, path
 
+    def __getitem__(self, idx):
+        if self.use_mosaic and random.random() < self.mosaic_prob and len(self.img_paths) >= 4:
+            idxs = random.sample(range(len(self.img_paths)), 4)
+            imgs, labels, paths = [], [], []
+            for j in idxs:
+                img_j, lbl_j, path_j = self._load_single(j)
+                imgs.append(img_j); labels.append(lbl_j); paths.append(path_j)
+            img_m, lbl_m = mosaic_data(imgs, labels)
+            return img_m, lbl_m, paths
+
+        if self.use_copy_paste and random.random() < self.copy_paste_prob:
+            idx2 = random.randint(0, len(self.img_paths)-1)
+            img1, lbl1, path1 = self._load_single(idx)
+            img2, lbl2, _ = self._load_single(idx2)
+            img_cp, lbl_cp = copy_paste_data(img1, img2, lbl1, lbl2)
+            return img_cp, lbl_cp, path1
+
+        if self.use_mixup:
+            idx2 = random.randint(0, len(self.img_paths)-1)
+            img1, lbl1, path1 = self._load_single(idx)
+            img2, lbl2, _ = self._load_single(idx2)
+            img_mx, lbl_mx, _ = mixup_data(img1, img2, lbl1, lbl2, self.mixup_alpha)
+            return img_mx, lbl_mx, path1
+
+        return self._load_single(idx)
+
 class APTOSModule(pl.LightningDataModule):
-    def __init__(self, root, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, transform=None):
+    def __init__(
+        self,
+        root,
+        batch_size=BATCH_SIZE,
+        num_workers=NUM_WORKERS,
+        transform=None,
+        use_mixup=USE_MIXUP,
+        mixup_alpha=MIXUP_ALPHA,
+        use_mosaic=USE_MOSAIC,
+        mosaic_prob=MOSAIC_PROB,
+        use_copy_paste=USE_COPY_PASTE,
+        copy_paste_prob=COPY_PASTE_PROB,
+    ):
         super().__init__()
         self.root = root
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.transform = transform
+        self.use_mixup = use_mixup
+        self.mixup_alpha = mixup_alpha
+        self.use_mosaic = use_mosaic
+        self.mosaic_prob = mosaic_prob
+        self.use_copy_paste = use_copy_paste
+        self.copy_paste_prob = copy_paste_prob
 
     def setup(self, stage=None):
         # stage can be 'fit', 'validate', 'test', or 'predict'
         if stage == "fit" or stage is None:
-            self.train_ds = APTOSDataset(self.root, split="train", transform=self.transform)
-            self.val_ds   = APTOSDataset(self.root, split="val",   transform=self.transform)
+            self.train_ds = APTOSDataset(
+                self.root, split="train", transform=self.transform,
+                use_mixup=self.use_mixup, mixup_alpha=self.mixup_alpha,
+                use_mosaic=self.use_mosaic, mosaic_prob=self.mosaic_prob,
+                use_copy_paste=self.use_copy_paste, copy_paste_prob=self.copy_paste_prob,
+            )
+            self.val_ds = APTOSDataset(
+                self.root, split="val", transform=self.transform,
+                use_mixup=self.use_mixup, mixup_alpha=self.mixup_alpha,
+                use_mosaic=self.use_mosaic, mosaic_prob=self.mosaic_prob,
+                use_copy_paste=self.use_copy_paste, copy_paste_prob=self.copy_paste_prob,
+            )
         if stage == "test":
-            self.test_ds  = APTOSDataset(self.root, split="test",  transform=self.transform)
+            self.test_ds = APTOSDataset(
+                self.root, split="test", transform=self.transform,
+                use_mixup=self.use_mixup, mixup_alpha=self.mixup_alpha,
+                use_mosaic=self.use_mosaic, mosaic_prob=self.mosaic_prob,
+                use_copy_paste=self.use_copy_paste, copy_paste_prob=self.copy_paste_prob,
+            )
         if stage == "full":
-            self.val_ds  = APTOSDataset(self.root, split="full",  transform=self.transform)
+            self.val_ds = APTOSDataset(
+                self.root, split="full", transform=self.transform,
+                use_mixup=self.use_mixup, mixup_alpha=self.mixup_alpha,
+                use_mosaic=self.use_mosaic, mosaic_prob=self.mosaic_prob,
+                use_copy_paste=self.use_copy_paste, copy_paste_prob=self.copy_paste_prob,
+            )
 
     def train_dataloader(self):
         return DataLoader(self.train_ds, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers, pin_memory=True)

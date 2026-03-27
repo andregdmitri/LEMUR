@@ -1,6 +1,7 @@
 import os
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
@@ -73,7 +74,14 @@ class RETFoundTask(pl.LightningModule):
     def shared_step(self, batch, stage):
         x, y, _ = batch
         logits = self(x)
-        loss = self.loss_fn(logits, y)
+
+        if y.ndim == 2:
+            log_probs = F.log_softmax(logits, dim=1)
+            loss = F.kl_div(log_probs, y, reduction='batchmean')
+            y_for_metrics = y.argmax(dim=1)
+        else:
+            loss = self.loss_fn(logits, y)
+            y_for_metrics = y
 
         probs = torch.softmax(logits, dim=1)
         preds = torch.argmax(probs, dim=1)
@@ -144,11 +152,31 @@ def run_train_retfound(args):
         tfm = train_transform_default(IMG_SIZE)
 
     if args.dataset == "idrid":
-        dm = IDRiDModule(root=IDRID_PATH, transform=tfm, batch_size=BATCH_SIZE)
+        dm = IDRiDModule(
+            root=IDRID_PATH,
+            transform=tfm,
+            batch_size=BATCH_SIZE,
+            use_mixup=USE_MIXUP,
+            mixup_alpha=MIXUP_ALPHA,
+            use_mosaic=USE_MOSAIC,
+            mosaic_prob=MOSAIC_PROB,
+            use_copy_paste=USE_COPY_PASTE,
+            copy_paste_prob=COPY_PASTE_PROB,
+        )
         csv_path = os.path.join(IDRID_PATH, "2. Groundtruths", "a. IDRiD_Disease Grading_Training Labels.csv")
         class_weights = compute_idrid_class_weights(csv_path)
     else:
-        dm = APTOSModule(root=APTOS_PATH, transform=tfm, batch_size=BATCH_SIZE)
+        dm = APTOSModule(
+            root=APTOS_PATH,
+            transform=tfm,
+            batch_size=BATCH_SIZE,
+            use_mixup=USE_MIXUP,
+            mixup_alpha=MIXUP_ALPHA,
+            use_mosaic=USE_MOSAIC,
+            mosaic_prob=MOSAIC_PROB,
+            use_copy_paste=USE_COPY_PASTE,
+            copy_paste_prob=COPY_PASTE_PROB,
+        )
         class_weights = None
 
     dm.setup(stage="fit")

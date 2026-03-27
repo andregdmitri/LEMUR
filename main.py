@@ -11,6 +11,7 @@ from config.constants import (
 from train.distill import run_distillation
 from train.head import run_head_training
 from eval.eval_vmamba import run_evaluation
+from train.prune_quantize import apply_structured_pruning, apply_dynamic_quantization
 
 from train.train_retfound import run_train_retfound
 from eval.eval_retfound import run_eval_retfound
@@ -76,6 +77,7 @@ Examples:
             "distill",
             "head",
             "eval",
+            "prune_quantize",
             "retfound_linear",
             "retfound_finetune",
             "retfound_eval",
@@ -110,6 +112,10 @@ Examples:
     parser.add_argument("--dataset", type=str, default="idrid",
                         choices=["idrid", "aptos", "mbrset"],
                         help="Dataset selection")
+
+    parser.add_argument("--student_model", type=str, default="vmamba",
+                        choices=["vmamba", "tinyvit", "mobilenet_v3_small", "efficientnet_b0"],
+                        help="Student architecture for distillation/head training")
 
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed for reproducibility")
@@ -153,6 +159,11 @@ def main(args):
     # ==============================
     # RETFOUND PIPELINE (NEW)
     # ==============================
+    elif args.run == "prune_quantize":
+        print("=== PRUNING + QUANTIZATION ENTRYPOINT ===")
+        # User should instantiate and load model externally in a script; this is placeholder.
+        print("Use train/prune_quantize.py directly with a loaded model and dataloader.")
+
     elif args.run == "retfound_linear":
         args.retfound_mode = "linear"
         run_train_retfound(args)

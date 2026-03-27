@@ -1,6 +1,7 @@
 import os
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
@@ -11,6 +12,7 @@ from utils.transforms import eval_transform
 from config.constants import *
 from models.vmamba_backbone import VisualMamba
 from dataloader.idrid import IDRiDModule, compute_idrid_class_weights
+from timm import create_model
 from dataloader.aptos import APTOSModule
 from optimizers.optimizer import warmup_cosine_optimizer
 
@@ -71,19 +73,26 @@ class VMambaHeadTask(pl.LightningModule):
     def shared_step(self, batch, stage):
         x, y, _ = batch
         logits = self(x)
-        loss = self.loss_fn(logits, y)
-        
+
+        if y.ndim == 2:
+            # Mixed labels from mixup / mosaic / copy-paste
+            log_probs = F.log_softmax(logits, dim=1)
+            loss = F.kl_div(log_probs, y, reduction='batchmean')
+            y_for_metrics = y.argmax(dim=1)
+        else:
+            loss = self.loss_fn(logits, y)
+            y_for_metrics = y
+
         probs = torch.softmax(logits, dim=1)
         preds = torch.argmax(probs, dim=1)
 
-        # Update metrics (safe-guarded for AUROC)
         metrics = self.train_metrics if stage == "train" else self.val_metrics
 
-        metrics["acc"].update(preds, y)
-        metrics["f1"].update(preds, y)
+        metrics["acc"].update(preds, y_for_metrics)
+        metrics["f1"].update(preds, y_for_metrics)
         try:
-            metrics["auroc"].update(probs, y)
-            metrics["aupr"].update(probs, y)
+            metrics["auroc"].update(probs, y_for_metrics)
+            metrics["aupr"].update(probs, y_for_metrics)
         except ValueError:
             pass
 
@@ -137,25 +146,65 @@ def run_head_training(args):
     print("\n=== PHASE II: VMAMBA HEAD TRAINING ===")
 
     # 1. Backbone Loading logic
-    backbone = VisualMamba(
-        img_size=IMG_SIZE, patch_size=PATCH_SIZE, in_chans=IN_CHANS,
-        embed_dim=VMAMBA_EMBED_DIM, depth=VMAMBA_DEPTH, 
-        learning_rate=0.0, mask_ratio=0.0, use_cls_token=False,
-    )
+    student_model = getattr(args, 'student_model', STUDENT_MODEL)
+    if student_model == 'vmamba':
+        backbone = VisualMamba(
+            img_size=IMG_SIZE, patch_size=PATCH_SIZE, in_chans=IN_CHANS,
+            embed_dim=VMAMBA_EMBED_DIM, depth=VMAMBA_DEPTH,
+            learning_rate=0.0, mask_ratio=0.0, use_cls_token=False,
+        )
+    elif student_model == 'tinyvit':
+        backbone = create_model('tinyvit_tiny_patch16_224', pretrained=False, num_classes=0)
+    elif student_model == 'mobilenet_v3_small':
+        backbone = create_model('mobilenetv3_small_100', pretrained=False, num_classes=0)
+    elif student_model == 'efficientnet_b0':
+        backbone = create_model('efficientnet_b0', pretrained=False, num_classes=0)
+    else:
+        raise ValueError(f"Unknown student_model: {student_model}")
 
     ckpt = torch.load(args.load_backbone, map_location="cpu")
     # Handle both Lightning state_dicts and raw state_dicts
     state_dict = ckpt.get("state_dict", ckpt)
-    new_state = {k.replace("student.", ""): v for k, v in state_dict.items() if "student." in k}
-    backbone.load_state_dict(new_state if new_state else state_dict, strict=True)
+    student_state = {k.replace("student.", ""): v for k, v in state_dict.items() if k.startswith("student.")}
+
+    if student_state:
+        backbone.load_state_dict(student_state, strict=False)
+    else:
+        # for direct backbone checkpoints or non-vmamba student
+        try:
+            # remove any prefix that might vary (e.g., backbone., encoder.)
+            simplified = {k.split('.', 1)[-1]: v for k, v in state_dict.items()}
+            backbone.load_state_dict(simplified, strict=False)
+        except Exception:
+            backbone.load_state_dict(state_dict, strict=False)
 
     # 2. Data & Weights
     tfm = eval_transform(IMG_SIZE)
     if args.dataset == "aptos":
-        dm = APTOSModule(root=APTOS_PATH, transform=tfm, batch_size=BATCH_SIZE)
+        dm = APTOSModule(
+            root=APTOS_PATH,
+            transform=tfm,
+            batch_size=BATCH_SIZE,
+            use_mixup=USE_MIXUP,
+            mixup_alpha=MIXUP_ALPHA,
+            use_mosaic=USE_MOSAIC,
+            mosaic_prob=MOSAIC_PROB,
+            use_copy_paste=USE_COPY_PASTE,
+            copy_paste_prob=COPY_PASTE_PROB,
+        )
         class_weights = None
     else:
-        dm = IDRiDModule(root=IDRID_PATH, transform=tfm, batch_size=BATCH_SIZE)
+        dm = IDRiDModule(
+            root=IDRID_PATH,
+            transform=tfm,
+            batch_size=BATCH_SIZE,
+            use_mixup=USE_MIXUP,
+            mixup_alpha=MIXUP_ALPHA,
+            use_mosaic=USE_MOSAIC,
+            mosaic_prob=MOSAIC_PROB,
+            use_copy_paste=USE_COPY_PASTE,
+            copy_paste_prob=COPY_PASTE_PROB,
+        )
         csv_path = os.path.join(IDRID_PATH, "2. Groundtruths", "a. IDRiD_Disease Grading_Training Labels.csv")
         class_weights = compute_idrid_class_weights(csv_path)
 

@@ -9,6 +9,7 @@ from utils.transforms import eval_transform
 from config.constants import *
 from models.vmamba_backbone import VisualMamba
 from dataloader.idrid import IDRiDModule
+from timm import create_model
 from dataloader.aptos import APTOSModule
 from utils.flops import compute_flops
 from eval.shared_eval import EvalWrapper
@@ -19,19 +20,33 @@ def run_evaluation(args):
     # -------------------------------------------------
     # 1. Reconstruct Model Structure
     # -------------------------------------------------
-    backbone = VisualMamba(
-        img_size=IMG_SIZE,
-        patch_size=PATCH_SIZE,
-        in_chans=IN_CHANS,
-        embed_dim=VMAMBA_EMBED_DIM,
-        depth=VMAMBA_DEPTH,
-        learning_rate=0.0,
-        mask_ratio=0.0,
-        use_cls_token=False
-    )
+    student_model = getattr(args, 'student_model', STUDENT_MODEL)
+    if student_model == 'vmamba':
+        backbone = VisualMamba(
+            img_size=IMG_SIZE,
+            patch_size=PATCH_SIZE,
+            in_chans=IN_CHANS,
+            embed_dim=VMAMBA_EMBED_DIM,
+            depth=VMAMBA_DEPTH,
+            learning_rate=0.0,
+            mask_ratio=0.0,
+            use_cls_token=False
+        )
+        backbone_embed_dim = backbone.embed_dim
+    elif student_model == 'tinyvit':
+        backbone = create_model('tinyvit_tiny_patch16_224', pretrained=False, num_classes=0)
+        backbone_embed_dim = backbone.num_features
+    elif student_model == 'mobilenet_v3_small':
+        backbone = create_model('mobilenetv3_small_100', pretrained=False, num_classes=0)
+        backbone_embed_dim = backbone.num_features
+    elif student_model == 'efficientnet_b0':
+        backbone = create_model('efficientnet_b0', pretrained=False, num_classes=0)
+        backbone_embed_dim = backbone.num_features
+    else:
+        raise ValueError(f"Unknown student_model: {student_model}")
 
     head = nn.Sequential(
-        nn.Linear(backbone.embed_dim, 512),
+        nn.Linear(backbone_embed_dim, 512),
         nn.BatchNorm1d(512),
         nn.GELU(),
         nn.Dropout(0.3),
@@ -104,11 +119,41 @@ def run_evaluation(args):
     tfm = eval_transform(IMG_SIZE)
 
     if args.dataset == "idrid":
-        dm = IDRiDModule(root=IDRID_PATH, transform=tfm, batch_size=BATCH_SIZE)
+        dm = IDRiDModule(
+            root=IDRID_PATH,
+            transform=tfm,
+            batch_size=BATCH_SIZE,
+            use_mixup=USE_MIXUP,
+            mixup_alpha=MIXUP_ALPHA,
+            use_mosaic=USE_MOSAIC,
+            mosaic_prob=MOSAIC_PROB,
+            use_copy_paste=USE_COPY_PASTE,
+            copy_paste_prob=COPY_PASTE_PROB,
+        )
     elif args.dataset == "aptos":
-        dm = APTOSModule(root=APTOS_PATH, transform=tfm, batch_size=BATCH_SIZE)
+        dm = APTOSModule(
+            root=APTOS_PATH,
+            transform=tfm,
+            batch_size=BATCH_SIZE,
+            use_mixup=USE_MIXUP,
+            mixup_alpha=MIXUP_ALPHA,
+            use_mosaic=USE_MOSAIC,
+            mosaic_prob=MOSAIC_PROB,
+            use_copy_paste=USE_COPY_PASTE,
+            copy_paste_prob=COPY_PASTE_PROB,
+        )
     elif args.dataset == "mbrset":
-        dm = MBRSETModule(root=MBRSET_PATH, transform=tfm, batch_size=BATCH_SIZE)
+        dm = MBRSETModule(
+            root=MBRSET_PATH,
+            transform=tfm,
+            batch_size=BATCH_SIZE,
+            use_mixup=USE_MIXUP,
+            mixup_alpha=MIXUP_ALPHA,
+            use_mosaic=USE_MOSAIC,
+            mosaic_prob=MOSAIC_PROB,
+            use_copy_paste=USE_COPY_PASTE,
+            copy_paste_prob=COPY_PASTE_PROB,
+        )
     dm.setup(stage="full")
 
     # -------------------------------------------------
@@ -139,10 +184,11 @@ def run_evaluation(args):
     import time
 
     row = {
-        "model": "vmamba_aptos",
+        "model": f"{student_model}_{args.dataset}",
         "mode": "eval",
         "mask_ratio": "unmasked",
         "dataset": args.dataset,
+        "student_model": student_model,
         "model_path": args.load_model,
         "seed": args.seed,
         **val_metrics
