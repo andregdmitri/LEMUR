@@ -36,8 +36,10 @@ WEIGHT_DECAY = float(os.getenv('WEIGHT_DECAY', 1e-4))
 DEVICE = os.getenv('DEVICE', 'cuda' if torch.cuda.is_available() else 'cpu')
 
 # Paths
-DATA_DIR = os.getenv('DATA_DIR', './data')
+DATA_DIR = os.getenv('DATA_DIR', '/exp/andremitri/mamba')
 CHECKPOINT_DIR = os.getenv('CHECKPOINT_DIR', './checkpoints')
 IDRID_PATH = os.getenv('IDRID_PATH', os.path.join(DATA_DIR, 'aaryapatel98/indian-diabetic-retinopathy-image-dataset/versions/1/B.%20Disease%20Grading/B. Disease Grading'))
 APTOS_PATH = os.getenv('APTOS_PATH', os.path.join(DATA_DIR, 'aptos2019/versions/3'))
 MBRSET_PATH = os.getenv('MBRSET_PATH', os.path.join(DATA_DIR, 'mbrset/1'))
+MESSIDOR_PATH = os.getenv('MESSIDOR_PATH', os.path.join(DATA_DIR, 'messidor2preprocess/versions/2'))
+PAPILA_PATH = os.getenv('PAPILA_PATH', os.path.join(DATA_DIR, 'PAPILA'))

@@ -12,6 +12,8 @@ from config.constants import *
 from models.vmamba_backbone import VisualMamba
 from dataloader.idrid import IDRiDModule, compute_idrid_class_weights
 from dataloader.aptos import APTOSModule
+from dataloader.messidor import MessidorModule, compute_messidor_class_weights
+from dataloader.papila import PAPILAModule
 from optimizers.optimizer import warmup_cosine_optimizer
 
 class VMambaHeadTask(pl.LightningModule):
@@ -153,6 +155,12 @@ def run_head_training(args):
     tfm = eval_transform(IMG_SIZE)
     if args.dataset == "aptos":
         dm = APTOSModule(root=APTOS_PATH, transform=tfm, batch_size=BATCH_SIZE)
+        class_weights = None
+    elif args.dataset == "messidor":
+        dm = MessidorModule(root=MESSIDOR_PATH, transform=tfm, batch_size=BATCH_SIZE)
+        class_weights = compute_messidor_class_weights(MESSIDOR_PATH)
+    elif args.dataset == "papila":
+        dm = PAPILAModule(root=PAPILA_PATH, transform=tfm, batch_size=BATCH_SIZE)
         class_weights = None
     else:
         dm = IDRiDModule(root=IDRID_PATH, transform=tfm, batch_size=BATCH_SIZE)

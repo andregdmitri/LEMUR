@@ -1,4 +1,6 @@
 from dataloader.mbrset import MBRSETModule
+from dataloader.messidor import MessidorModule
+from dataloader.papila import PAPILAModule
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
@@ -109,6 +111,12 @@ def run_evaluation(args):
         dm = APTOSModule(root=APTOS_PATH, transform=tfm, batch_size=BATCH_SIZE)
     elif args.dataset == "mbrset":
         dm = MBRSETModule(root=MBRSET_PATH, transform=tfm, batch_size=BATCH_SIZE)
+    elif args.dataset == "messidor":
+        dm = MessidorModule(root=MESSIDOR_PATH, transform=tfm, batch_size=BATCH_SIZE)
+    elif args.dataset == "papila":
+        dm = PAPILAModule(root=PAPILA_PATH, transform=tfm, batch_size=BATCH_SIZE)
+    else:
+        raise ValueError(f"Unsupported dataset: {args.dataset}")
     dm.setup(stage="full")
 
     # -------------------------------------------------
@@ -139,7 +147,7 @@ def run_evaluation(args):
     import time
 
     row = {
-        "model": "vmamba_aptos",
+        "model": f"vmamba_{args.dataset}",
         "mode": "eval",
         "mask_ratio": "unmasked",
         "dataset": args.dataset,

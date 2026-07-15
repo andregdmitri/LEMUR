@@ -108,7 +108,7 @@ Examples:
                         help="Full model checkpoint for evaluation (VMamba or RETFound)")
 
     parser.add_argument("--dataset", type=str, default="idrid",
-                        choices=["idrid", "aptos", "mbrset"],
+                        choices=["idrid", "aptos", "mbrset", "messidor", "papila"],
                         help="Dataset selection")
 
     parser.add_argument("--seed", type=int, default=42,

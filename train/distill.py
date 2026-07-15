@@ -13,6 +13,8 @@ from models.vmamba_backbone import VisualMamba
 from models.dist import DistillationModule
 from dataloader.idrid import IDRiDModule
 from dataloader.aptos import APTOSModule
+from dataloader.messidor import MessidorModule
+from dataloader.papila import PAPILAModule
 
 # -----------------------------------------------------------
 #  Helpers: Model Builders
@@ -62,6 +64,10 @@ def run_distillation(args):
     
     if args.dataset == "aptos":
         dm = APTOSModule(root=APTOS_PATH, transform=tfm, batch_size=BATCH_SIZE)
+    elif args.dataset == "messidor":
+        dm = MessidorModule(root=MESSIDOR_PATH, transform=tfm, batch_size=BATCH_SIZE)
+    elif args.dataset == "papila":
+        dm = PAPILAModule(root=PAPILA_PATH, transform=tfm, batch_size=BATCH_SIZE)
     else:
         dm = IDRiDModule(root=IDRID_PATH, transform=tfm, batch_size=BATCH_SIZE)
     dm.setup(stage="fit")

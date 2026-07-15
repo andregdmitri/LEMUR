@@ -1,6 +1,6 @@
 # LEMUR: A Ultra-Lightweight Distilled Retinal Foundation Model Using Mamba
 
-This repository contains a unified pipeline for distilling a student VMamba model from a RETFound teacher, training classification heads, and evaluating on retinal fundus datasets (IDRiD, APTOS, MBRSET).
+This repository contains a unified pipeline for distilling a student VMamba model from a RETFound teacher, training classification heads, and evaluating on retinal fundus datasets (IDRiD, APTOS, MBRSET, Messidor, PAPILA).
 
 This README focuses on the CLI (`main.py`) and the actual project layout so you can run evaluation and training quickly.
 
@@ -10,7 +10,7 @@ This README focuses on the CLI (`main.py`) and the actual project layout so you 
 
 - `main.py` — unified CLI entrypoint (see CLI section below)
 - `config/` — `constants.py` (defaults and environment-driven overrides)
-- `dataloader/` — `idrid.py`, `aptos.py` (Lightning DataModules)
+- `dataloader/` — `idrid.py`, `aptos.py`, `mbrset.py`, `messidor.py`, `papila.py` (Lightning DataModules)
 - `models/` — `retfound.py`, `vmamba_backbone.py`, `dist.py`, `models_vit.py`
 - `train/` — `distill.py`, `head.py`, `train_retfound.py`
 - `eval/` — `eval_vmamba.py`, `eval_retfound.py`, `shared_eval.py`
@@ -43,7 +43,7 @@ Shared CLI arguments (most common):
 - `--teacher_ckpt` — optional teacher checkpoint override
 - `--load_backbone` — path to distilled backbone (required for `--run head`)
 - `--load_model` — path to full model checkpoint for evaluation (required for `--run eval` and `--run retfound_eval`)
-- `--dataset` — `idrid` (default) or `aptos`
+- `--dataset` — `idrid` (default), `aptos`, `mbrset`, `messidor`, or `papila`
 
 RETFound-specific:
 
@@ -72,6 +72,18 @@ Evaluation — VMamba (APTOS):
 
 ```bash
 python main.py --run eval --load_model CHECKPOINT_PATH --dataset aptos
+```
+
+Evaluation — VMamba (Messidor):
+
+```bash
+python main.py --run eval --load_model CHECKPOINT_PATH --dataset messidor
+```
+
+Evaluation — VMamba (PAPILA):
+
+```bash
+python main.py --run eval --load_model CHECKPOINT_PATH --dataset papila
 ```
 
 Evaluation — RETFound Lightning ckpt:
