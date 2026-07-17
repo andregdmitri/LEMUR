@@ -37,7 +37,7 @@ DEVICE = os.getenv('DEVICE', 'cuda' if torch.cuda.is_available() else 'cpu')
 
 # Paths
 DATA_DIR = os.getenv('DATA_DIR', '/exp/andremitri/mamba')
-CHECKPOINT_DIR = os.getenv('CHECKPOINT_DIR', './checkpoints')
+CHECKPOINT_DIR = os.getenv('CHECKPOINT_DIR', '/home/andremitri/checkpoints')
 IDRID_PATH = os.getenv('IDRID_PATH', os.path.join(DATA_DIR, 'aaryapatel98/indian-diabetic-retinopathy-image-dataset/versions/1/B.%20Disease%20Grading/B. Disease Grading'))
 APTOS_PATH = os.getenv('APTOS_PATH', os.path.join(DATA_DIR, 'aptos2019/versions/3'))
 MBRSET_PATH = os.getenv('MBRSET_PATH', os.path.join(DATA_DIR, 'mbrset/1'))

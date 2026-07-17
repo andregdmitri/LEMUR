@@ -4,17 +4,13 @@ import torch.nn as nn
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
-from torchvision import transforms
 
 from utils.transforms import eval_transform
 from config.constants import *
 from models.retfound import RETFoundBackbone
 from models.vmamba_backbone import VisualMamba
 from models.dist import DistillationModule
-from dataloader.idrid import IDRiDModule
-from dataloader.aptos import APTOSModule
-from dataloader.messidor import MessidorModule
-from dataloader.papila import PAPILAModule
+from dataloader import get_dataloader
 
 # -----------------------------------------------------------
 #  Helpers: Model Builders
@@ -61,15 +57,7 @@ def run_distillation(args):
 
     # 2. Data
     tfm = eval_transform(IMG_SIZE)
-    
-    if args.dataset == "aptos":
-        dm = APTOSModule(root=APTOS_PATH, transform=tfm, batch_size=BATCH_SIZE)
-    elif args.dataset == "messidor":
-        dm = MessidorModule(root=MESSIDOR_PATH, transform=tfm, batch_size=BATCH_SIZE)
-    elif args.dataset == "papila":
-        dm = PAPILAModule(root=PAPILA_PATH, transform=tfm, batch_size=BATCH_SIZE)
-    else:
-        dm = IDRiDModule(root=IDRID_PATH, transform=tfm, batch_size=BATCH_SIZE)
+    dm = get_dataloader(args.dataset, tfm, batch_size=BATCH_SIZE)
     dm.setup(stage="fit")
 
     # 3. Distillation Wrapper

@@ -14,6 +14,7 @@ from eval.eval_vmamba import run_evaluation
 
 from train.train_retfound import run_train_retfound
 from eval.eval_retfound import run_eval_retfound
+from train.train import run_light_model, MODEL_REGISTRY
 
 
 def parse_args():
@@ -79,6 +80,10 @@ Examples:
             "retfound_linear",
             "retfound_finetune",
             "retfound_eval",
+            "mobilenet",
+            "efficientnet",
+            "unet",
+            "vmamba",
         ],
         help="Which pipeline to run"
     )
@@ -123,6 +128,13 @@ Examples:
     parser.add_argument("--epochs", type=int, default=100,
                         help="Epochs for RETFound linear/fine-tune modes")
 
+    parser.add_argument("--model", type=str, default=None,
+                        choices=list(MODEL_REGISTRY.keys()),
+                        help="Model choice for lightweight training (mobilenet, efficientnet, unet, vmamba)")
+
+    parser.add_argument("--pretrained", action="store_true",
+                        help="Use ImageNet pretrained backbone if available")
+
     args = parser.parse_args()
 
     # -----------------------------
@@ -163,6 +175,13 @@ def main(args):
 
     elif args.run == "retfound_eval":
         run_eval_retfound(args)
+
+    # ==============================
+    # LIGHTWEIGHT MODELS (mobilenet, efficientnet, unet, vmamba)
+    # ==============================
+    elif args.run in MODEL_REGISTRY:
+        args.model = args.run
+        run_light_model(args)
 
     else:
         raise ValueError(f"Unknown mode: {args.run}")

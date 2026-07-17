@@ -10,10 +10,7 @@ from utils.transforms import train_transform_retfound_linear, train_transform_de
 
 from config.constants import *
 from models.retfound import RETFoundBackbone
-from dataloader.idrid import IDRiDModule, compute_idrid_class_weights
-from dataloader.aptos import APTOSModule
-from dataloader.messidor import MessidorModule, compute_messidor_class_weights
-from dataloader.papila import PAPILAModule
+from dataloader import get_dataloader, get_class_weights
 from optimizers.optimizer import warmup_cosine_optimizer
 
 # -----------------------------------------------------------
@@ -145,22 +142,8 @@ def run_train_retfound(args):
     else:
         tfm = train_transform_default(IMG_SIZE)
 
-    if args.dataset == "idrid":
-        dm = IDRiDModule(root=IDRID_PATH, transform=tfm, batch_size=BATCH_SIZE)
-        csv_path = os.path.join(IDRID_PATH, "2. Groundtruths", "a. IDRiD_Disease Grading_Training Labels.csv")
-        class_weights = compute_idrid_class_weights(csv_path)
-    elif args.dataset == "aptos":
-        dm = APTOSModule(root=APTOS_PATH, transform=tfm, batch_size=BATCH_SIZE)
-        class_weights = None
-    elif args.dataset == "messidor":
-        dm = MessidorModule(root=MESSIDOR_PATH, transform=tfm, batch_size=BATCH_SIZE)
-        class_weights = compute_messidor_class_weights(MESSIDOR_PATH)
-    elif args.dataset == "papila":
-        dm = PAPILAModule(root=PAPILA_PATH, transform=tfm, batch_size=BATCH_SIZE)
-        class_weights = None
-    else:
-        raise ValueError(f"Unsupported dataset: {args.dataset}")
-
+    dm = get_dataloader(args.dataset, tfm, batch_size=BATCH_SIZE)
+    class_weights = get_class_weights(args.dataset, compute_weights=True)
     dm.setup(stage="fit")
 
     # 2. Setup Model
