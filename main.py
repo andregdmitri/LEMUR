@@ -7,6 +7,7 @@ from config.constants import (
     MASK_RATIO,
     DIST_EPOCHS,
     HEAD_EPOCHS,
+    NUM_WORKERS
 )
 from train.distill import run_distillation
 from train.head import run_head_training
@@ -125,6 +126,13 @@ Examples:
         default="default",
         choices=["default", "none", "retina_all", "retina_strong"],
         help="Training augmentation strategy for fundus images"
+    )
+
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=NUM_WORKERS,
+        help="Number of DataLoader workers for preprocessing"
     )
 
     parser.add_argument(

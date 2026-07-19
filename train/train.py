@@ -29,7 +29,12 @@ def run_light_model(args):
 
     train_transform = build_train_transform(getattr(args, "augmentation", "default"), IMG_SIZE)
     val_transform = eval_transform(IMG_SIZE)
-    datamodule = get_dataloader(args.dataset, (train_transform, val_transform), batch_size=BATCH_SIZE)
+    datamodule = get_dataloader(
+        args.dataset,
+        (train_transform, val_transform),
+        batch_size=BATCH_SIZE,
+        num_workers=getattr(args, "num_workers", NUM_WORKERS),
+    )
     class_weights = get_class_weights(args.dataset, compute_weights=True)
     datamodule.setup(stage="fit")
 

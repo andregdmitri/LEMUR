@@ -248,17 +248,29 @@ class PAPILAModule(pl.LightningDataModule):
             self.val_ds = PAPILADataset(self.root, split="full", transform=self.transform, label_col=self.label_col)
 
     def train_dataloader(self):
-        return DataLoader(self.train_ds, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers, pin_memory=True)
+        loader_kwargs = dict(batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers, pin_memory=torch.cuda.is_available())
+        if self.num_workers > 0:
+            loader_kwargs.update({"persistent_workers": True, "prefetch_factor": 2})
+        return DataLoader(self.train_ds, **loader_kwargs)
 
     def val_dataloader(self):
-        return DataLoader(self.val_ds, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
+        loader_kwargs = dict(batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, pin_memory=torch.cuda.is_available())
+        if self.num_workers > 0:
+            loader_kwargs.update({"persistent_workers": True, "prefetch_factor": 2})
+        return DataLoader(self.val_ds, **loader_kwargs)
 
     def test_dataloader(self):
-        return DataLoader(self.test_ds, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
+        loader_kwargs = dict(batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, pin_memory=torch.cuda.is_available())
+        if self.num_workers > 0:
+            loader_kwargs.update({"persistent_workers": True, "prefetch_factor": 2})
+        return DataLoader(self.test_ds, **loader_kwargs)
 
     def full_dataloader(self):
         ds = PAPILADataset(self.root, split="full", transform=self.transform, label_col=self.label_col)
-        return DataLoader(ds, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
+        loader_kwargs = dict(batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, pin_memory=torch.cuda.is_available())
+        if self.num_workers > 0:
+            loader_kwargs.update({"persistent_workers": True, "prefetch_factor": 2})
+        return DataLoader(ds, **loader_kwargs)
 
 
 def compute_papila_class_weights(root):

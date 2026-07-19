@@ -42,7 +42,7 @@ DATASET_CONFIG = {
 }
 
 
-def get_dataloader(dataset_name, transform, batch_size=BATCH_SIZE):
+def get_dataloader(dataset_name, transform, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS):
     """
     Get a LightningDataModule for the specified dataset.
     
@@ -65,6 +65,7 @@ def get_dataloader(dataset_name, transform, batch_size=BATCH_SIZE):
         root=config["path"],
         transform=transform,
         batch_size=batch_size,
+        num_workers=num_workers,
     )
 
 
