@@ -6,7 +6,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-from utils.transforms import train_transform_default
+from utils.transforms import build_train_transform, eval_transform
 from config.constants import *
 from dataloader import get_dataloader, get_class_weights
 from optimizers.optimizer import warmup_cosine_optimizer
@@ -27,8 +27,9 @@ MODEL_REGISTRY = {
 def run_light_model(args):
     seed = pl.seed_everything(args.seed or SEED)
 
-    transform = train_transform_default(IMG_SIZE)
-    datamodule = get_dataloader(args.dataset, transform, batch_size=BATCH_SIZE)
+    train_transform = build_train_transform(getattr(args, "augmentation", "default"), IMG_SIZE)
+    val_transform = eval_transform(IMG_SIZE)
+    datamodule = get_dataloader(args.dataset, (train_transform, val_transform), batch_size=BATCH_SIZE)
     class_weights = get_class_weights(args.dataset, compute_weights=True)
     datamodule.setup(stage="fit")
 

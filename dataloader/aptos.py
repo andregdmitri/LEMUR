@@ -65,15 +65,20 @@ class APTOSModule(pl.LightningDataModule):
         self.num_workers = num_workers
         self.transform = transform
 
+        if isinstance(transform, (list, tuple)) and len(transform) == 2:
+            self.train_transform, self.val_transform = transform
+        else:
+            self.train_transform = self.val_transform = transform
+
     def setup(self, stage=None):
         # stage can be 'fit', 'validate', 'test', or 'predict'
         if stage == "fit" or stage is None:
-            self.train_ds = APTOSDataset(self.root, split="train", transform=self.transform)
-            self.val_ds   = APTOSDataset(self.root, split="val",   transform=self.transform)
+            self.train_ds = APTOSDataset(self.root, split="train", transform=self.train_transform)
+            self.val_ds   = APTOSDataset(self.root, split="val",   transform=self.val_transform)
         if stage == "test":
-            self.test_ds  = APTOSDataset(self.root, split="test",  transform=self.transform)
+            self.test_ds  = APTOSDataset(self.root, split="test",  transform=self.val_transform)
         if stage == "full":
-            self.val_ds  = APTOSDataset(self.root, split="full",  transform=self.transform)
+            self.val_ds  = APTOSDataset(self.root, split="full",  transform=self.val_transform)
 
     def train_dataloader(self):
         return DataLoader(self.train_ds, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers, pin_memory=True)

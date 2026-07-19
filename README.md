@@ -44,6 +44,7 @@ Shared CLI arguments (most common):
 - `--load_backbone` — path to distilled backbone (required for `--run head`)
 - `--load_model` — path to full model checkpoint for evaluation (required for `--run eval` and `--run retfound_eval`)
 - `--dataset` — `idrid` (default), `aptos`, `mbrset`, `messidor`, or `papila`
+- `--augmentation` — training augmentation policy for retinal fundus images: `default`, `none`, `retina_all`, or `retina_strong`
 
 RETFound-specific:
 
@@ -112,6 +113,19 @@ python main.py --run retfound_linear --dataset idrid --lr 3e-4
 
 # Fine-tune
 python main.py --run retfound_finetune --dataset aptos --lr 1e-5
+```
+
+Retinal fundus augmentation examples:
+
+```bash
+# Baseline training
+python main.py --run head --dataset idrid --load_backbone checkpoints/vmamba_distilled_student.pth --augmentation default
+
+# Stronger retinal-style augmentation for DR classification
+python main.py --run head --dataset aptos --load_backbone checkpoints/vmamba_distilled_student.pth --augmentation retina_strong
+
+# More diverse policy-based augmentation
+python main.py --run distill --dataset idrid --augmentation retina_all
 ```
 
 ---

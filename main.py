@@ -119,6 +119,47 @@ Examples:
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed for reproducibility")
 
+    parser.add_argument(
+        "--augmentation",
+        type=str,
+        default="default",
+        choices=["default", "none", "retina_all", "retina_strong"],
+        help="Training augmentation strategy for fundus images"
+    )
+
+    parser.add_argument(
+        "--prune",
+        action="store_true",
+        help="Apply structured pruning to the trained backbone/head before saving"
+    )
+
+    parser.add_argument(
+        "--prune_amount",
+        type=float,
+        default=0.2,
+        help="Pruning amount for structured pruning"
+    )
+
+    parser.add_argument(
+        "--prune_n",
+        type=int,
+        default=2,
+        help="Pruning block size for structured pruning"
+    )
+
+    parser.add_argument(
+        "--prune_dim",
+        type=int,
+        default=0,
+        help="Pruning dimension for structured pruning"
+    )
+
+    parser.add_argument(
+        "--quantize",
+        action="store_true",
+        help="Apply dynamic quantization to the trained backbone/head before saving"
+    )
+
     # ----------------------------------------------------------------------
     # RETFOUND-SPECIFIC ARGUMENTS
     # ----------------------------------------------------------------------
@@ -153,6 +194,9 @@ Examples:
 
 
 def main(args):
+    if args.run == "retfound_linear" and args.augmentation == "default":
+        args.augmentation = "default"
+
     if args.run == "distill":
         run_distillation(args)
 

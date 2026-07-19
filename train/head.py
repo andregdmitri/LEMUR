@@ -6,11 +6,12 @@ from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from torchmetrics import Accuracy, F1Score, AUROC, AveragePrecision
 
-from utils.transforms import eval_transform
+from utils.transforms import build_train_transform, eval_transform
 from config.constants import *
 from models.vmamba_backbone import VisualMamba
 from dataloader import get_dataloader, get_class_weights
 from optimizers.optimizer import warmup_cosine_optimizer
+from train.prune import apply_structured_pruning, apply_dynamic_quantization
 
 class VMambaHeadTask(pl.LightningModule):
     def __init__(self, backbone, lr, class_weights=None):
@@ -148,8 +149,9 @@ def run_head_training(args):
     backbone.load_state_dict(new_state if new_state else state_dict, strict=True)
 
     # 2. Data & Weights
-    tfm = eval_transform(IMG_SIZE)
-    dm = get_dataloader(args.dataset, tfm, batch_size=BATCH_SIZE)
+    train_tfm = build_train_transform(getattr(args, "augmentation", "default"), IMG_SIZE)
+    val_tfm = eval_transform(IMG_SIZE)
+    dm = get_dataloader(args.dataset, (train_tfm, val_tfm), batch_size=BATCH_SIZE)
     class_weights = get_class_weights(args.dataset, compute_weights=True)
     dm.setup()
 
@@ -177,17 +179,45 @@ def run_head_training(args):
     trainer.fit(model, dm)
 
     # 4. Final Save (Backbone + Head split)
+    best_ckpt = torch.load(ckpt_cb.best_model_path)["state_dict"]
+    model.load_state_dict(best_ckpt, strict=False)
+    model.eval()
+
+    if args.prune:
+        model.backbone = apply_structured_pruning(
+            model.backbone,
+            amount=args.prune_amount,
+            n=args.prune_n,
+            dim=args.prune_dim,
+        )
+        model.head = apply_structured_pruning(
+            model.head,
+            amount=args.prune_amount,
+            n=args.prune_n,
+            dim=args.prune_dim,
+        )
+
+    if args.quantize:
+        model.backbone = apply_dynamic_quantization(model.backbone)
+        model.head = apply_dynamic_quantization(model.head)
+
+    suffixes = []
+    if args.prune:
+        suffixes.append("pruned")
+    if args.quantize:
+        suffixes.append("quantized")
+    suffix = f"_{'_'.join(suffixes)}" if suffixes else ""
+
     save_path = os.path.join(
         CHECKPOINT_DIR,
         f"head_{args.dataset}_{mask_tag}_{seed}_{timestamp}",
-        "vmamba_final_head.pth"
+        f"vmamba_final_head{suffix}.pth"
     )
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
-    best_ckpt = torch.load(ckpt_cb.best_model_path)["state_dict"]
 
     final_dict = {
-        "backbone": {k.replace("backbone.", ""): v for k, v in best_ckpt.items() if k.startswith("backbone.")},
-        "head": {k.replace("head.", ""): v for k, v in best_ckpt.items() if k.startswith("head.")}
+        "backbone": {k.replace("backbone.", ""): v for k, v in model.state_dict().items() if k.startswith("backbone.")},
+        "head": {k.replace("head.", ""): v for k, v in model.state_dict().items() if k.startswith("head.")}
     }
     torch.save(final_dict, save_path)
     print(f"[✓] Model saved to {save_path}")

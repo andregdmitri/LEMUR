@@ -50,10 +50,15 @@ class VMambaClassifier(pl.LightningModule):
 
         # Classification head (map from embed_dim to num_classes)
         self.classifier = nn.Sequential(
-            nn.Linear(embed_dim, embed_dim // 2),
-            nn.ReLU(inplace=True),
+            nn.Linear(embed_dim, 512),
+            nn.BatchNorm1d(512),
+            nn.GELU(),
+            nn.Dropout(0.3),
+            nn.Linear(512, 128),
+            nn.BatchNorm1d(128),
+            nn.GELU(),
             nn.Dropout(0.2),
-            nn.Linear(embed_dim // 2, num_classes),
+            nn.Linear(128, NUM_CLASSES)
         )
 
         self.loss_fn = nn.CrossEntropyLoss(weight=class_weights) if class_weights is not None else nn.CrossEntropyLoss()

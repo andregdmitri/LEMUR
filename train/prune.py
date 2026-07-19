@@ -1,10 +1,15 @@
 import torch
 import torch.nn.utils.prune as prune
 
+try:
+    from torch.ao.quantization import quantize_dynamic
+except ImportError:  # pragma: no cover - fallback for older torch versions
+    from torch.quantization import quantize_dynamic
+
 
 def apply_structured_pruning(model, amount=0.2, n=2, dim=0):
-    """Aplica pruning estruturado nas camadas conv e linear de forma simples."""
-    for name, module in model.named_modules():
+    """Apply structured pruning to Conv2d and Linear layers."""
+    for _, module in model.named_modules():
         if isinstance(module, (torch.nn.Conv2d, torch.nn.Linear)):
             try:
                 prune.ln_structured(module, name='weight', amount=amount, n=n, dim=dim)
@@ -15,13 +20,12 @@ def apply_structured_pruning(model, amount=0.2, n=2, dim=0):
 
 
 def apply_dynamic_quantization(model, dtype=torch.qint8):
-    """Quantização dinâmica (aplicável em CPU em PyTorch)"""
-    qmodel = torch.quantization.quantize_dynamic(
+    """Apply dynamic quantization to supported layers."""
+    return quantize_dynamic(
         model,
         {torch.nn.Linear, torch.nn.Conv2d},
-        dtype=dtype
+        dtype=dtype,
     )
-    return qmodel
 
 
 def benchmark_model(model, dataloader, device='cuda'):

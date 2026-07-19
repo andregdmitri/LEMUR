@@ -66,14 +66,19 @@ class IDRiDModule(pl.LightningDataModule):
         self.num_workers = num_workers
         self.transform = transform
 
+        if isinstance(transform, (list, tuple)) and len(transform) == 2:
+            self.train_transform, self.val_transform = transform
+        else:
+            self.train_transform = self.val_transform = transform
+
     def setup(self, stage=None):
         if stage == "fit" or stage is None:
-            self.train_ds = IDRiDDataset(self.root, split="train", transform=self.transform)
-            self.val_ds   = IDRiDDataset(self.root, split="test",  transform=self.transform)
+            self.train_ds = IDRiDDataset(self.root, split="train", transform=self.train_transform)
+            self.val_ds   = IDRiDDataset(self.root, split="test",  transform=self.val_transform)
         if stage == "test":
-            self.test_ds  = IDRiDDataset(self.root, split="test",  transform=self.transform)
+            self.test_ds  = IDRiDDataset(self.root, split="test",  transform=self.val_transform)
         if stage == "full":
-            self.val_ds  = IDRiDDataset(self.root, split="full",  transform=self.transform)
+            self.val_ds  = IDRiDDataset(self.root, split="full",  transform=self.val_transform)
 
     def train_dataloader(self):
         return DataLoader(self.train_ds, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)

@@ -5,7 +5,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
-from utils.transforms import eval_transform
+from utils.transforms import build_train_transform, eval_transform
 from config.constants import *
 from models.retfound import RETFoundBackbone
 from models.vmamba_backbone import VisualMamba
@@ -56,8 +56,9 @@ def run_distillation(args):
     )
 
     # 2. Data
-    tfm = eval_transform(IMG_SIZE)
-    dm = get_dataloader(args.dataset, tfm, batch_size=BATCH_SIZE)
+    train_tfm = build_train_transform(getattr(args, "augmentation", "default"), IMG_SIZE)
+    val_tfm = eval_transform(IMG_SIZE)
+    dm = get_dataloader(args.dataset, (train_tfm, val_tfm), batch_size=BATCH_SIZE)
     dm.setup(stage="fit")
 
     # 3. Distillation Wrapper

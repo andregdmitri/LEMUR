@@ -6,7 +6,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 from torchmetrics import Accuracy, AUROC, F1Score, AveragePrecision
 from torchvision import transforms
-from utils.transforms import train_transform_retfound_linear, train_transform_default
+from utils.transforms import build_train_transform, eval_transform
 
 from config.constants import *
 from models.retfound import RETFoundBackbone
@@ -137,12 +137,13 @@ class RETFoundTask(pl.LightningModule):
 def run_train_retfound(args):
     seed = pl.seed_everything(args.seed or 42)
     
-    if args.retfound_mode == "linear":
-        tfm = train_transform_retfound_linear(IMG_SIZE)
-    else:
-        tfm = train_transform_default(IMG_SIZE)
+    aug_mode = getattr(args, "augmentation", "default")
+    if args.retfound_mode == "linear" and aug_mode == "default":
+        aug_mode = "retfound_linear"
+    train_tfm = build_train_transform(aug_mode, IMG_SIZE)
+    val_tfm = eval_transform(IMG_SIZE)
 
-    dm = get_dataloader(args.dataset, tfm, batch_size=BATCH_SIZE)
+    dm = get_dataloader(args.dataset, (train_tfm, val_tfm), batch_size=BATCH_SIZE)
     class_weights = get_class_weights(args.dataset, compute_weights=True)
     dm.setup(stage="fit")
 
