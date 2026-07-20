@@ -50,10 +50,15 @@ def copy_paste_data(x1, x2, y1, y2):
     y = (1 - alpha) * one_hot(y1) + alpha * one_hot(y2)
     return x, y
 
-def preprocess_image(img_path):
+def preprocess_image(img_path, sigmaX=30):
+    """
+    Improved preprocessing with Luminance Normalization (Ben Graham method)
+    and artifact reduction.
+    """
     img = cv2.imread(img_path)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
+    # 1. Background Cropping (Your existing robust logic)
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     _, thresh = cv2.threshold(gray, 10, 255, cv2.THRESH_BINARY)
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -63,13 +68,30 @@ def preprocess_image(img_path):
         x, y, w, h = cv2.boundingRect(c)
         img = img[y:y+h, x:x+w]
 
+    # 2. Extract Green Channel
     green_channel = img[:, :, 1]
-    median = cv2.medianBlur(green_channel, 3)
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    clahe_img = clahe.apply(median)
-    bilateral = cv2.bilateralFilter(clahe_img, d=9, sigmaColor=75, sigmaSpace=75)
 
-    processed_img_rgb = cv2.cvtColor(bilateral, cv2.COLOR_GRAY2RGB)
+    # 3. Luminance Normalization
+    # This subtracts the blurred version to remove uneven illumination
+    blurred = cv2.GaussianBlur(green_channel, (0, 0), sigmaX)
+    # The weight 4 and -4 are standard in top Kaggle solutions for DR
+    normalized = cv2.addWeighted(green_channel, 4, blurred, -4, 128)
+
+    # 4. CLAHE (Local Contrast)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    clahe_img = clahe.apply(normalized)
+
+    # 5. Optional: Circular Masking 
+    # If your dataset has black corners after cropping, this removes them
+    # to prevent the model from learning "corner artifacts"
+    h, w = clahe_img.shape
+    mask = np.zeros((h, w), dtype=np.uint8)
+    cv2.circle(mask, (w // 2, h // 2), int(min(w, h) * 0.45), 255, -1)
+    clahe_img = cv2.bitwise_and(clahe_img, clahe_img, mask=mask)
+
+    # Convert back to 3-channel RGB for PyTorch models
+    processed_img_rgb = cv2.cvtColor(clahe_img, cv2.COLOR_GRAY2RGB)
+    
     return Image.fromarray(processed_img_rgb)
 
 def eval_transform(img_size):
