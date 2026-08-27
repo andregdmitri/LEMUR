@@ -6,6 +6,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
+from train.train_retfound import RETFoundTask
 from utils.transforms import build_train_transform, eval_transform
 from config.constants import *
 from dataloader import get_dataloader, get_class_weights
@@ -14,13 +15,14 @@ from models.mobilenet import MobileNetClassifier
 from models.efficientnet import EfficientNetClassifier
 from models.unet import UNetClassifier
 from models.vmamba import VMambaClassifier
-
+from models.retfound import RETFoundBackbone
 
 MODEL_REGISTRY = {
     "mobilenet": MobileNetClassifier,
     "efficientnet": EfficientNetClassifier,
     "unet": UNetClassifier,
     "vmamba": VMambaClassifier,
+    "retfound": RETFoundTask,  # Placeholder for RETFound model, to be implemented
 }
 
 
@@ -56,7 +58,7 @@ def run_light_model(args):
     logger = WandbLogger(project="light_models_retina", name=run_name)
 
     trainer = pl.Trainer(
-        max_epochs=args.epochs,
+        max_epochs=args.head_epochs,
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
         devices=1,
         precision="16-mixed" if torch.cuda.is_available() else 32,

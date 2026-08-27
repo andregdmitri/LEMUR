@@ -1,3 +1,4 @@
+import os
 from torchvision import transforms
 import cv2
 import numpy as np
@@ -54,15 +55,26 @@ def preprocess_image(img_path, sigmaX=30):
     """
     Improved preprocessing with Luminance Normalization (Ben Graham method)
     and artifact reduction.
+
+    Accepts either a file path, a PIL image, or an already-loaded numpy array.
     """
-    img = cv2.imread(img_path)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    if isinstance(img_path, Image.Image):
+        img = np.array(img_path.convert("RGB"))
+    elif isinstance(img_path, np.ndarray):
+        img = img_path
+    elif isinstance(img_path, (str, os.PathLike)):
+        img = cv2.imread(str(img_path))
+        if img is None:
+            raise FileNotFoundError(f"Could not read image: {img_path}")
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    else:
+        raise TypeError(f"Unsupported image input type: {type(img_path)}")
 
     # 1. Background Cropping (Your existing robust logic)
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     _, thresh = cv2.threshold(gray, 10, 255, cv2.THRESH_BINARY)
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
+
     if contours:
         c = max(contours, key=cv2.contourArea)
         x, y, w, h = cv2.boundingRect(c)
@@ -81,7 +93,7 @@ def preprocess_image(img_path, sigmaX=30):
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     clahe_img = clahe.apply(normalized)
 
-    # 5. Optional: Circular Masking 
+    # 5. Optional: Circular Masking
     # If your dataset has black corners after cropping, this removes them
     # to prevent the model from learning "corner artifacts"
     h, w = clahe_img.shape
@@ -91,8 +103,12 @@ def preprocess_image(img_path, sigmaX=30):
 
     # Convert back to 3-channel RGB for PyTorch models
     processed_img_rgb = cv2.cvtColor(clahe_img, cv2.COLOR_GRAY2RGB)
-    
+
     return Image.fromarray(processed_img_rgb)
+
+
+def preprocess_transform(sigmaX=30):
+    return transforms.Lambda(lambda img: preprocess_image(img, sigmaX=sigmaX))
 
 def eval_transform(img_size):
     return transforms.Compose([
@@ -104,6 +120,7 @@ def eval_transform(img_size):
 def train_transform_default(img_size):
     return transforms.Compose([
         transforms.Resize((img_size, img_size)),
+        preprocess_transform(),
         transforms.ToTensor(),
         NORMALIZE
     ])

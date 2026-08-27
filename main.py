@@ -174,7 +174,7 @@ Examples:
     parser.add_argument("--checkpoint", type=str, default=None,
                         help="RETFound pretrained checkpoint (optional)")
 
-    parser.add_argument("--epochs", type=int, default=100,
+    parser.add_argument("--epochs", type=int, default=1000,
                         help="Epochs for RETFound linear/fine-tune modes")
 
     parser.add_argument("--model", type=str, default=None,
