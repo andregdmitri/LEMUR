@@ -19,37 +19,35 @@ def one_hot(label, num_classes=NUM_CLASSES):
     vec[label] = 1.0
     return vec
 
-def mixup_data(x1, x2, y1, y2, alpha=0.4):
-    lam = np.random.beta(alpha, alpha) if alpha > 0 else 1.0
-    x = lam * x1 + (1.0 - lam) * x2
-    y = lam * one_hot(y1) + (1.0 - lam) * one_hot(y2)
-    return x, y, lam
+# def mixup_data(x1, x2, y1, y2, alpha=0.4):
+#     lam = np.random.beta(alpha, alpha) if alpha > 0 else 1.0
+#     x = lam * x1 + (1.0 - lam) * x2
+#     y = lam * one_hot(y1) + (1.0 - lam) * one_hot(y2)
+#     return x, y, lam
 
-def mosaic_data(images, labels):
-    h, w = images[0].shape[1:]
-    h2, w2 = h // 2, w // 2
-    out = torch.zeros_like(images[0])
-    out[:, :h2, :w2] = images[0][:, :h2, :w2]
-    out[:, :h2, w2:] = images[1][:, :h2, :w2]
-    out[:, h2:, :w2] = images[2][:, :h2, :w2]
-    out[:, h2:, w2:] = images[3][:, :h2, :w2]
-    y = (one_hot(labels[0]) + one_hot(labels[1]) + one_hot(labels[2]) + one_hot(labels[3])) / 4.0
-    return out, y
+# def mosaic_data(images, labels):
+#     h, w = images[0].shape[1:]
+#     h2, w2 = h // 2, w // 2
+#     out = torch.zeros_like(images[0])
+#     out[:, :h2, :w2] = images[0][:, :h2, :w2]
+#     out[:, :h2, w2:] = images[1][:, :h2, :w2]
+#     out[:, h2:, :w2] = images[2][:, :h2, :w2]
+#     out[:, h2:, w2:] = images[3][:, :h2, :w2]
+#     y = (one_hot(labels[0]) + one_hot(labels[1]) + one_hot(labels[2]) + one_hot(labels[3])) / 4.0
+#     return out, y
 
-def copy_paste_data(x1, x2, y1, y2):
-    _, h, w = x1.shape
-    patch_h = h // 3
-    patch_w = w // 3
-    xs = random.randint(0, h - patch_h)
-    ys = random.randint(0, w - patch_w)
-
-    xp = x2[:, xs:xs + patch_h, ys:ys + patch_w].clone()
-    x = x1.clone()
-    x[:, xs:xs + patch_h, ys:ys + patch_w] = xp
-
-    alpha = (patch_h * patch_w) / (h * w)
-    y = (1 - alpha) * one_hot(y1) + alpha * one_hot(y2)
-    return x, y
+# def copy_paste_data(x1, x2, y1, y2):
+#     _, h, w = x1.shape
+#     patch_h = h // 3
+#     patch_w = w // 3
+#     xs = random.randint(0, h - patch_h)
+#     ys = random.randint(0, w - patch_w)
+#     xp = x2[:, xs:xs + patch_h, ys:ys + patch_w].clone()
+#     x = x1.clone()
+#     x[:, xs:xs + patch_h, ys:ys + patch_w] = xp
+#     alpha = (patch_h * patch_w) / (h * w)
+#     y = (1 - alpha) * one_hot(y1) + alpha * one_hot(y2)
+#     return x, y
 
 def preprocess_image(img_path, sigmaX=30):
     """
@@ -141,7 +139,7 @@ def train_transform_retina_all(img_size):
         transforms.RandomApply([transforms.ElasticTransform(alpha=50.0)], p=0.3),
         transforms.ToTensor(),
         # Coarse Dropout/Erasing
-        transforms.RandomErasing(p=0.2, scale=(0.02, 0.1)),
+        # transforms.RandomErasing(p=0.2, scale=(0.02, 0.1)),
         NORMALIZE
     ])
 
@@ -154,7 +152,7 @@ def train_transform_retina_strong(img_size):
         transforms.RandomVerticalFlip(p=0.5),
         transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.15, hue=0.05),
         transforms.RandomApply([transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.5))], p=0.35),
-        transforms.RandomErasing(p=0.1, scale=(0.02, 0.08), ratio=(0.3, 3.3), value=0),
+        # transforms.RandomErasing(p=0.1, scale=(0.02, 0.08), ratio=(0.3, 3.3), value=0),
         transforms.ToTensor(),
         NORMALIZE
     ])
