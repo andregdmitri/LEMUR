@@ -9,6 +9,7 @@ from utils.transforms import build_train_transform, eval_transform
 from config.constants import *
 from models.retfound import RETFoundBackbone
 from models.vmamba_backbone import VisualMamba
+from models.tinyvit import TinyViTStudent
 from models.dist import DistillationModule
 from dataloader import get_dataloader
 
@@ -29,6 +30,13 @@ def build_student(args):
         use_cls_token=False
     )
 
+def build_tinyvit_student(args):
+    """Initializes the TinyViT student backbone (encoder-only, no masking)."""
+    return TinyViTStudent(
+        model_name=TINYVIT_MODEL,
+        pretrained=False,
+    )
+
 def build_teacher():
     """Initializes and freezes the RETFound teacher."""
     path = os.path.join(CHECKPOINT_DIR, "RETFound_cfp_weights.pth")
@@ -41,18 +49,26 @@ def build_teacher():
 def run_distillation(args):
     seed = args.seed or SEED
     pl.seed_everything(seed)
-    print("\n=== PHASE I: VMAMBA DISTILLATION ===")
+
+    student_type = getattr(args, "student", "vmamba")
+    print(f"\n=== PHASE I: {student_type.upper()} DISTILLATION (teacher=RETFound) ===")
 
     # 1. Models
     teacher = build_teacher()
-    student = build_student(args)
+    if student_type == "tinyvit":
+        student = build_tinyvit_student(args)
+    else:
+        student = build_student(args)
 
-    # Project student output dim (VMAMBA_EMBED_DIM) to teacher dim (1024)
+    # Student embed dim (VMamba: VMAMBA_EMBED_DIM, TinyViT: num_features)
+    student_embed_dim = getattr(student, "embed_dim", VMAMBA_EMBED_DIM)
+
+    # Project student output dim to teacher dim (TEACHER_EMBED_DIM)
     # This is often needed if the student is smaller than the teacher.
     projector = nn.Sequential(
-        nn.Linear(VMAMBA_EMBED_DIM, 2 * VMAMBA_EMBED_DIM),
+        nn.Linear(student_embed_dim, 2 * student_embed_dim),
         nn.GELU(),
-        nn.Linear(2 * VMAMBA_EMBED_DIM, TEACHER_EMBED_DIM),
+        nn.Linear(2 * student_embed_dim, TEACHER_EMBED_DIM),
     )
 
     # 2. Data
@@ -84,13 +100,13 @@ def run_distillation(args):
     )
 
     import time
-    run_name = f"distill_{args.dataset}_{int(time.time())}"
+    run_name = f"distill_{student_type}_{args.dataset}_{int(time.time())}"
     trainer = pl.Trainer(
         max_epochs=args.dist_epochs or DIST_EPOCHS,
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
         devices=1,
         precision="16-mixed",
-        logger=WandbLogger(project="vmamba_distillation", name=run_name),
+        logger=WandbLogger(project="distillation", name=run_name),
         callbacks=[ckpt_cb, early_cb],
         log_every_n_steps=5
     )
@@ -120,7 +136,7 @@ def run_distillation(args):
         train_metrics = []
 
     # Save artifacts & results
-    save_backbone_and_projector(best_path)
+    save_backbone_and_projector(best_path, student_type=student_type)
 
     # Append results to CSV
     try:
@@ -142,7 +158,7 @@ def run_distillation(args):
         pass
 
 
-def save_backbone_and_projector(best_ckpt_path):
+def save_backbone_and_projector(best_ckpt_path, student_type="vmamba"):
     """Extracts student and projector weights from the unified Lightning checkpoint."""
     print(f"\n[i] Extracting weights from: {best_ckpt_path}")
     
@@ -155,8 +171,8 @@ def save_backbone_and_projector(best_ckpt_path):
 
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
     
-    student_path = os.path.join(CHECKPOINT_DIR, "vmamba_distilled_student.pth")
-    projector_path = os.path.join(CHECKPOINT_DIR, "vmamba_distilled_projector.pth")
+    student_path = os.path.join(CHECKPOINT_DIR, f"{student_type}_distilled_student.pth")
+    projector_path = os.path.join(CHECKPOINT_DIR, f"{student_type}_distilled_projector.pth")
 
     # Saving in the format required by the 'Head' training Phase II
     torch.save({"backbone": student_sd}, student_path)
