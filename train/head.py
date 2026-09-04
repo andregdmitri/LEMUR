@@ -9,6 +9,7 @@ from torchmetrics import Accuracy, F1Score, AUROC, AveragePrecision
 from utils.transforms import build_train_transform, eval_transform
 from config.constants import *
 from models.vmamba_backbone import VisualMamba
+from models.tinyvit import TinyViTStudent
 from dataloader import get_dataloader, get_class_weights
 from optimizers.optimizer import warmup_cosine_optimizer
 from train.prune import apply_structured_pruning, apply_dynamic_quantization
@@ -133,14 +134,19 @@ class VMambaHeadTask(pl.LightningModule):
 
 def run_head_training(args):
     pl.seed_everything(args.seed or 42)
-    print("\n=== PHASE II: VMAMBA HEAD TRAINING ===")
+
+    student_type = getattr(args, "student", "vmamba")
+    print(f"\n=== PHASE II: {student_type.upper()} HEAD TRAINING ===")
 
     # 1. Backbone Loading logic
-    backbone = VisualMamba(
-        img_size=IMG_SIZE, patch_size=PATCH_SIZE, in_chans=IN_CHANS,
-        embed_dim=VMAMBA_EMBED_DIM, depth=VMAMBA_DEPTH, 
-        learning_rate=0.0, mask_ratio=0.0, use_cls_token=False,
-    )
+    if student_type == "tinyvit":
+        backbone = TinyViTStudent(model_name=TINYVIT_MODEL, pretrained=False)
+    else:
+        backbone = VisualMamba(
+            img_size=IMG_SIZE, patch_size=PATCH_SIZE, in_chans=IN_CHANS,
+            embed_dim=VMAMBA_EMBED_DIM, depth=VMAMBA_DEPTH, 
+            learning_rate=0.0, mask_ratio=0.0, use_cls_token=False,
+        )
 
     ckpt = torch.load(args.load_backbone, map_location="cpu")
     # Handle both Lightning state_dicts and raw state_dicts

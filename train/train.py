@@ -15,6 +15,7 @@ from models.mobilenet import MobileNetClassifier
 from models.efficientnet import EfficientNetClassifier
 from models.unet import UNetClassifier
 from models.vmamba import VMambaClassifier
+from models.tinyvit import TinyViTClassifier
 from models.retfound import RETFoundBackbone
 
 MODEL_REGISTRY = {
@@ -22,6 +23,7 @@ MODEL_REGISTRY = {
     "efficientnet": EfficientNetClassifier,
     "unet": UNetClassifier,
     "vmamba": VMambaClassifier,
+    "tinyvit": TinyViTClassifier,
     "retfound": RETFoundTask,  # Placeholder for RETFound model, to be implemented
 }
 
@@ -69,6 +71,48 @@ def run_light_model(args):
 
     trainer.fit(model, datamodule)
     print(f"[✓] Training complete: {ckpt_cb.best_model_path}")
+
+    # ---- Compute final metrics on train & val splits ----
+    try:
+        best_ckpt = torch.load(ckpt_cb.best_model_path)["state_dict"]
+        model.load_state_dict(best_ckpt, strict=False)
+        model.eval()
+
+        val_metrics = trainer.validate(model, dataloaders=datamodule.val_dataloader())
+        train_metrics = trainer.validate(model, dataloaders=datamodule.train_dataloader())
+
+        val_metrics = val_metrics[0] if val_metrics else {}
+        train_metrics = train_metrics[0] if train_metrics else {}
+        # Relabel the train-split pass to a "train/" prefix for clarity
+        train_metrics = {
+            ("train/" + k[len("val/"):]) if k.startswith("val/") else k: v
+            for k, v in train_metrics.items()
+        }
+    except Exception as e:
+        print(f"[!] Metric computation failed: {e}")
+        val_metrics = {}
+        train_metrics = {}
+
+    # ---- Append results to CSV ----
+    try:
+        from utils.results import append_result
+        row = {
+            "timestamp": int(time.time()),
+            "mode": args.model,
+            "dataset": args.dataset,
+            "model_path": ckpt_cb.best_model_path,
+            "run_name": run_name,
+            "seed": args.seed,
+            "monitor": ckpt_cb.monitor,
+            "monitor_value": float(ckpt_cb.best_model_score)
+                if getattr(ckpt_cb, "best_model_score", None) is not None else None,
+            "train_metrics": train_metrics,
+            "val_metrics": val_metrics,
+        }
+        append_result(row)
+    except Exception as e:
+        print(f"[!] Failed to append result to CSV: {e}")
+
     return ckpt_cb.best_model_path
 
 
