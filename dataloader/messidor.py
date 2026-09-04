@@ -97,14 +97,19 @@ class MessidorModule(pl.LightningDataModule):
         self.num_workers = num_workers
         self.transform = transform
 
+        if isinstance(transform, (list, tuple)) and len(transform) == 2:
+            self.train_transform, self.val_transform = transform
+        else:
+            self.train_transform = self.val_transform = transform
+
     def setup(self, stage=None):
         if stage == "fit" or stage is None:
-            self.train_ds = MessidorDataset(self.root, split="train", transform=self.transform)
-            self.val_ds = MessidorDataset(self.root, split="val", transform=self.transform)
+            self.train_ds = MessidorDataset(self.root, split="train", transform=self.train_transform)
+            self.val_ds = MessidorDataset(self.root, split="val", transform=self.val_transform)
         if stage == "test":
-            self.test_ds = MessidorDataset(self.root, split="test", transform=self.transform)
+            self.test_ds = MessidorDataset(self.root, split="test", transform=self.val_transform)
         if stage == "full":
-            self.val_ds = MessidorDataset(self.root, split="full", transform=self.transform)
+            self.val_ds = MessidorDataset(self.root, split="full", transform=self.val_transform)
 
     def train_dataloader(self):
         loader_kwargs = dict(batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers, pin_memory=torch.cuda.is_available())

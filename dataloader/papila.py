@@ -238,14 +238,19 @@ class PAPILAModule(pl.LightningDataModule):
         self.transform = transform
         self.label_col = label_col
 
+        if isinstance(transform, (list, tuple)) and len(transform) == 2:
+            self.train_transform, self.val_transform = transform
+        else:
+            self.train_transform = self.val_transform = transform
+
     def setup(self, stage=None):
         if stage == "fit" or stage is None:
-            self.train_ds = PAPILADataset(self.root, split="train", transform=self.transform, label_col=self.label_col)
-            self.val_ds = PAPILADataset(self.root, split="val", transform=self.transform, label_col=self.label_col)
+            self.train_ds = PAPILADataset(self.root, split="train", transform=self.train_transform, label_col=self.label_col)
+            self.val_ds = PAPILADataset(self.root, split="val", transform=self.val_transform, label_col=self.label_col)
         if stage == "test":
-            self.test_ds = PAPILADataset(self.root, split="test", transform=self.transform, label_col=self.label_col)
+            self.test_ds = PAPILADataset(self.root, split="test", transform=self.val_transform, label_col=self.label_col)
         if stage == "full":
-            self.val_ds = PAPILADataset(self.root, split="full", transform=self.transform, label_col=self.label_col)
+            self.val_ds = PAPILADataset(self.root, split="full", transform=self.val_transform, label_col=self.label_col)
 
     def train_dataloader(self):
         loader_kwargs = dict(batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers, pin_memory=torch.cuda.is_available())

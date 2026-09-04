@@ -224,3 +224,4 @@ vmamba_distillation/*
 retfound_unified/*
 run/*
 light_models_retina/
+distillation/*

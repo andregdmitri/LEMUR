@@ -15,12 +15,13 @@ INPUT_DIM = int(os.getenv('INPUT_DIM', 784))
 NUM_CLASSES = int(os.getenv('NUM_CLASSES', 5))
 IMG_SIZE = int(os.getenv('IMG_SIZE', 224))
 IN_CHANS = int(os.getenv('IN_CHANS', 3))
-VMAMBA_DEPTH = int(os.getenv('VMAMBA_DEPTH', 8)) # num of blocks  ### 8, 16, 32
-VMAMBA_EMBED_DIM = int(os.getenv('VMAMBA_EMBED_DIM', 64)) # projector -> teacher ### 64, 128, 256
-SSM_DIM = int(os.getenv('SSM_DIM', 8)) # spatial mixing module dimension ### 8, 16, 32
+VMAMBA_DEPTH = int(os.getenv('VMAMBA_DEPTH', 8)) # num of blocks  ### 4, 8, 16, 32
+VMAMBA_EMBED_DIM = int(os.getenv('VMAMBA_EMBED_DIM', 64)) # projector -> teacher ### 32, 64, 128, 256
+SSM_DIM = int(os.getenv('SSM_DIM', 8)) # spatial mixing module dimension ### 4, 8, 16, 32
 EXPAND_DIM = int(os.getenv('EXPAND_DIM', VMAMBA_EMBED_DIM * 2)) ### 128, 256, 512
 PATCH_SIZE = int(os.getenv('PATCH_SIZE', 32)) 
 TEACHER_EMBED_DIM = int(os.getenv('TEACHER_EMBED_DIM', 1024))
+TINYVIT_MODEL = os.getenv('TINYVIT_MODEL', 'tiny_vit_5m_224')
 NUM_WORKERS = int(os.getenv('NUM_WORKERS', 32))
 PATIENCE = int(os.getenv('PATIENCE', 50))
 FREEZE_BACKBONE = False  # os.getenv('FREEZE_BACKBONE', 'False') == 'True'
@@ -37,9 +38,9 @@ DEVICE = os.getenv('DEVICE', 'cuda' if torch.cuda.is_available() else 'cpu')
 
 # Paths
 DATA_DIR = os.getenv('DATA_DIR', '/exp/andremitri/mamba')
-CHECKPOINT_DIR = os.getenv('CHECKPOINT_DIR', '/home/andremitri/checkpoints')
+CHECKPOINT_DIR = os.getenv('CHECKPOINT_DIR', '/exp/andremitri/checkpoints')
 IDRID_PATH = os.getenv('IDRID_PATH', os.path.join(DATA_DIR, 'aaryapatel98/indian-diabetic-retinopathy-image-dataset/versions/1/B.%20Disease%20Grading/B. Disease Grading'))
 APTOS_PATH = os.getenv('APTOS_PATH', os.path.join(DATA_DIR, 'aptos2019/versions/3'))
 MBRSET_PATH = os.getenv('MBRSET_PATH', os.path.join(DATA_DIR, 'mbrset/1'))
 MESSIDOR_PATH = os.getenv('MESSIDOR_PATH', os.path.join(DATA_DIR, 'messidor2preprocess/versions/2'))
-PAPILA_PATH = os.getenv('PAPILA_PATH', os.path.join(DATA_DIR, 'PAPILA'))
+PAPILA_PATH = os.getenv('PAPILA_PATH', os.path.join(DATA_DIR, 'PAPILA/PapilaDB-PAPILA'))
