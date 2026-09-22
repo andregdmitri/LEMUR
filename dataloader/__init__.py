@@ -10,6 +10,7 @@ from dataloader.idrid import IDRiDModule, compute_idrid_class_weights
 from dataloader.aptos import APTOSModule
 from dataloader.messidor import MessidorModule, compute_messidor_class_weights
 from dataloader.mbrset import MBRSETModule, compute_mbrset_class_weights
+from dataloader.mured import MUREDModule, compute_mured_class_weights
 from dataloader.papila import PAPILAModule, compute_papila_class_weights
 
 
@@ -33,6 +34,11 @@ DATASET_CONFIG = {
         "module": MBRSETModule,
         "path": MBRSET_PATH,
         "weights_fn": compute_mbrset_class_weights,
+    },
+    "mured": {
+        "module": MUREDModule,
+        "path": MURED_PATH,
+        "weights_fn": compute_mured_class_weights,  # binary DR classification
     },
     "papila": {
         "module": PAPILAModule,
