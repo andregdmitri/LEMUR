@@ -43,4 +43,5 @@ IDRID_PATH = os.getenv('IDRID_PATH', os.path.join(DATA_DIR, 'aaryapatel98/indian
 APTOS_PATH = os.getenv('APTOS_PATH', os.path.join(DATA_DIR, 'aptos2019/versions/3'))
 MBRSET_PATH = os.getenv('MBRSET_PATH', os.path.join(DATA_DIR, 'mbrset/1'))
 MESSIDOR_PATH = os.getenv('MESSIDOR_PATH', os.path.join(DATA_DIR, 'messidor2preprocess/versions/2'))
+MURED_PATH = os.getenv('MURED_PATH', os.path.join(DATA_DIR, 'abhirampolisetti/multi-label-retinal-disease-mured-dataset/versions/1'))
 PAPILA_PATH = os.getenv('PAPILA_PATH', os.path.join(DATA_DIR, 'PAPILA/PapilaDB-PAPILA'))
