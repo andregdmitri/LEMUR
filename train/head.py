@@ -165,7 +165,7 @@ def run_head_training(args):
     model = VMambaHeadTask(backbone, lr=args.lr or LR, class_weights=class_weights)
     
     ckpt_cb = ModelCheckpoint(monitor="val/f1", mode="max", save_top_k=1, filename="best_head")
-    early_cb = EarlyStopping(monitor="val/f1", patience=100, mode="max")
+    early_cb = EarlyStopping(monitor="val/f1", patience=PATIENCE, mode="max")
 
     import time
     seed = args.seed or SEED

@@ -13,17 +13,17 @@ python main.py --run head --student tinyvit --seed 44 --mask_ratio 0.0 --dataset
 python main.py --run head --student tinyvit --seed 45 --mask_ratio 0.0 --dataset aptos --augmentation retina_all --load_backbone ./distillation/4lph1t0d/checkpoints/best_distillation_45_aptos.ckpt --num_workers 8 --prune --quantize
 python main.py --run head --student tinyvit --seed 46 --mask_ratio 0.0 --dataset aptos --augmentation retina_all --load_backbone ./distillation/zbws26n1/checkpoints/best_distillation_46_aptos.ckpt --num_workers 8 --prune --quantize
 
-# python main.py --run head --student tinyvit --seed 42 --mask_ratio 0.0 --dataset mbrset --augmentation retina_all --load_backbone ./distillation//checkpoints/best_distillation_42_aptos.ckpt --num_workers 8 --prune --quantize
-# python main.py --run head --student tinyvit --seed 43 --mask_ratio 0.0 --dataset mbrset --augmentation retina_all --load_backbone ./distillation//checkpoints/best_distillation_43_aptos.ckpt --num_workers 8 --prune --quantize
-# python main.py --run head --student tinyvit --seed 44 --mask_ratio 0.0 --dataset mbrset --augmentation retina_all --load_backbone ./distillation//checkpoints/best_distillation_44_aptos.ckpt --num_workers 8 --prune --quantize
-# python main.py --run head --student tinyvit --seed 45 --mask_ratio 0.0 --dataset mbrset --augmentation retina_all --load_backbone ./distillation//checkpoints/best_distillation_45_aptos.ckpt --num_workers 8 --prune --quantize
-# python main.py --run head --student tinyvit --seed 46 --mask_ratio 0.0 --dataset mbrset --augmentation retina_all --load_backbone ./distillation//checkpoints/best_distillation_46_aptos.ckpt --num_workers 8 --prune --quantize
+python main.py --run head --student tinyvit --seed 42 --mask_ratio 0.0 --dataset mbrset --augmentation retina_all --load_backbone ./distillation/fyf39jwv/checkpoints/best_distillation_42_mbrset.ckpt --num_workers 8 --prune --quantize
+python main.py --run head --student tinyvit --seed 43 --mask_ratio 0.0 --dataset mbrset --augmentation retina_all --load_backbone ./distillation/fyf39jwv/checkpoints/best_distillation_42_mbrset.ckpt --num_workers 8 --prune --quantize
+python main.py --run head --student tinyvit --seed 44 --mask_ratio 0.0 --dataset mbrset --augmentation retina_all --load_backbone ./distillation/fyf39jwv/checkpoints/best_distillation_42_mbrset.ckpt --num_workers 8 --prune --quantize
+python main.py --run head --student tinyvit --seed 45 --mask_ratio 0.0 --dataset mbrset --augmentation retina_all --load_backbone ./distillation/fyf39jwv/checkpoints/best_distillation_42_mbrset.ckpt --num_workers 8 --prune --quantize
+python main.py --run head --student tinyvit --seed 46 --mask_ratio 0.0 --dataset mbrset --augmentation retina_all --load_backbone ./distillation/fyf39jwv/checkpoints/best_distillation_42_mbrset.ckpt --num_workers 8 --prune --quantize
 
-# python main.py --run head --student tinyvit --seed 42 --mask_ratio 0.0 --dataset messidor --augmentation retina_all --load_backbone ./distillation//checkpoints/best_distillation_42_aptos.ckpt --num_workers 8 --prune --quantize
-# python main.py --run head --student tinyvit --seed 43 --mask_ratio 0.0 --dataset messidor --augmentation retina_all --load_backbone ./distillation//checkpoints/best_distillation_43_aptos.ckpt --num_workers 8 --prune --quantize
-# python main.py --run head --student tinyvit --seed 44 --mask_ratio 0.0 --dataset messidor --augmentation retina_all --load_backbone ./distillation//checkpoints/best_distillation_44_aptos.ckpt --num_workers 8 --prune --quantize
-# python main.py --run head --student tinyvit --seed 45 --mask_ratio 0.0 --dataset messidor --augmentation retina_all --load_backbone ./distillation//checkpoints/best_distillation_45_aptos.ckpt --num_workers 8 --prune --quantize
-# python main.py --run head --student tinyvit --seed 46 --mask_ratio 0.0 --dataset messidor --augmentation retina_all --load_backbone ./distillation//checkpoints/best_distillation_46_aptos.ckpt --num_workers 8 --prune --quantize
+python main.py --run head --student tinyvit --seed 42 --mask_ratio 0.0 --dataset messidor --augmentation retina_all --load_backbone ./distillation/3p30ps7s/checkpoints/best_distillation_42_messidor.ckpt --num_workers 8 --prune --quantize
+python main.py --run head --student tinyvit --seed 43 --mask_ratio 0.0 --dataset messidor --augmentation retina_all --load_backbone ./distillation/3p30ps7s/checkpoints/best_distillation_42_messidor.ckpt --num_workers 8 --prune --quantize
+python main.py --run head --student tinyvit --seed 44 --mask_ratio 0.0 --dataset messidor --augmentation retina_all --load_backbone ./distillation/3p30ps7s/checkpoints/best_distillation_42_messidor.ckpt --num_workers 8 --prune --quantize
+python main.py --run head --student tinyvit --seed 45 --mask_ratio 0.0 --dataset messidor --augmentation retina_all --load_backbone ./distillation/3p30ps7s/checkpoints/best_distillation_42_messidor.ckpt --num_workers 8 --prune --quantize
+python main.py --run head --student tinyvit --seed 46 --mask_ratio 0.0 --dataset messidor --augmentation retina_all --load_backbone ./distillation/3p30ps7s/checkpoints/best_distillation_42_messidor.ckpt --num_workers 8 --prune --quantize
 
 
 echo "All models finished training!"

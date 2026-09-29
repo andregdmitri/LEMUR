@@ -119,6 +119,7 @@ def train_transform_default(img_size):
     return transforms.Compose([
         transforms.Resize((img_size, img_size)),
         preprocess_transform(),
+        transforms.Resize((img_size, img_size)),
         transforms.ToTensor(),
         NORMALIZE
     ])

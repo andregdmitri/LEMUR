@@ -7,7 +7,8 @@ from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 import pytorch_lightning as pl
 from config.constants import BATCH_SIZE, NUM_WORKERS
-
+import numpy as np
+from sklearn.model_selection import train_test_split
 
 def _find_root_with_paths(root, required_paths, max_depth=3):
     root = os.path.abspath(root)
@@ -61,17 +62,19 @@ class MessidorDataset(Dataset):
             raise FileNotFoundError(f"No Messidor images were found in {self.img_dir}")
 
         if split != "full":
-            n = len(df)
-            val_count = max(1, int(n * self.val_split))
-            if split == "train":
-                df = df.iloc[:-val_count].reset_index(drop=True)
-            elif split in ["val", "test"]:
-                df = df.iloc[-val_count:].reset_index(drop=True)
-            else:
+            if split not in ["train", "val", "test"]:
                 raise ValueError(f"Unsupported split: {split}")
 
+            train_df, val_df = train_test_split(
+                df,
+                test_size=self.val_split,
+                random_state=42,
+                stratify=df["diagnosis"],
+            )
+            df = train_df if split == "train" else val_df
+            df = df.reset_index(drop=True)
+
         self.df = df
-        self.label_map = dict(zip(df["id_code"], df["diagnosis"].astype(int)))
         print(f"[MESSIDOR] Split: {split:<5} | Images: {len(self.df)}")
 
     def __len__(self):
@@ -84,8 +87,7 @@ class MessidorDataset(Dataset):
         if self.transform:
             img = self.transform(img)
 
-        img_id = os.path.basename(path).split(".")[0]
-        label = int(self.label_map.get(img_id, 0))
+        label = np.array(row["diagnosis"])
         return img, label, path
 
 
@@ -152,7 +154,7 @@ def compute_messidor_class_weights(root):
         df = df[df["adjudicated_gradable"] == 1]
 
     labels = df["diagnosis"].astype(int).values
-    classes = sorted(set(labels))
+    classes = np.unique(labels)
     from sklearn.utils.class_weight import compute_class_weight
 
     weights = compute_class_weight(class_weight="balanced", classes=classes, y=labels)

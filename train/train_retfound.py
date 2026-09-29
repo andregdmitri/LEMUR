@@ -157,7 +157,7 @@ def run_train_retfound(args):
 
     # 3. Trainer
     ckpt_cb = ModelCheckpoint(monitor="val/f1", mode="max", save_top_k=1, filename=f"retfound_{args.retfound_mode}_best")
-    early_cb = EarlyStopping(monitor="val/f1", patience=50, mode="max")
+    early_cb = EarlyStopping(monitor="val/f1", patience=PATIENCE, mode="max")
     
     import time
     run_name = f"retfound_{args.dataset}_seed{seed}_{int(time.time())}"

@@ -72,6 +72,12 @@ def run_light_model(args):
     trainer.fit(model, datamodule)
     print(f"[✓] Training complete: {ckpt_cb.best_model_path}")
 
+    train_metrics = {
+        key: value.detach().cpu().item() if torch.is_tensor(value) else float(value)
+        for key, value in trainer.callback_metrics.items()
+        if key.startswith("train/")
+    }
+
     # ---- Compute final metrics on train & val splits ----
     try:
         best_ckpt = torch.load(ckpt_cb.best_model_path)["state_dict"]
@@ -79,19 +85,11 @@ def run_light_model(args):
         model.eval()
 
         val_metrics = trainer.validate(model, dataloaders=datamodule.val_dataloader())
-        train_metrics = trainer.validate(model, dataloaders=datamodule.train_dataloader())
-
         val_metrics = val_metrics[0] if val_metrics else {}
-        train_metrics = train_metrics[0] if train_metrics else {}
-        # Relabel the train-split pass to a "train/" prefix for clarity
-        train_metrics = {
-            ("train/" + k[len("val/"):]) if k.startswith("val/") else k: v
-            for k, v in train_metrics.items()
-        }
     except Exception as e:
         print(f"[!] Metric computation failed: {e}")
         val_metrics = {}
-        train_metrics = {}
+        # train_metrics = {}
 
     # ---- Append results to CSV ----
     try:
